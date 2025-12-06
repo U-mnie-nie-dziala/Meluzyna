@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -25,6 +25,7 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
     { id: 'overview' as Tab, label: 'Overview', icon: BarChart3 },
     { id: 'performance' as Tab, label: 'Performance', icon: Activity },
     { id: 'risk' as Tab, label: 'Risk Analysis', icon: AlertCircle },
+    { id: 'stock-market' as Tab, label: 'Giełda', icon: AlertCircle },
   ];
 
   const sectorName = sector.charAt(0).toUpperCase() + sector.slice(1);
@@ -72,10 +73,42 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
         {activeTab === 'overview' && <OverviewTab data={data} />}
         {activeTab === 'performance' && <PerformanceTab data={data} />}
         {activeTab === 'risk' && <RiskTab data={data} />}
+        {activeTab === 'stock-market' && <StockMarket />}
       </div>
     </div>
   );
 }
+
+
+function StockMarket() {
+  const [latest, setLatest] = useState(null);
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/markets/reports/latest");
+        const data = await res.json();
+        setLatest(data);
+      } catch (error) {
+        console.error("Error fetching latest report:", error);
+      }
+    };
+
+    fetchLatest();
+  }, []); 
+
+  return (
+    <div>
+      <h1>Latest Market Report</h1>
+      {latest ? (
+        <pre>{JSON.stringify(latest, null, 2)}</pre>
+      ) : (
+        "Loading..."
+      )}
+    </div>
+  );
+}
+
 
 function OverviewTab({ data }: { data: AnalysisData }) {
   return (
