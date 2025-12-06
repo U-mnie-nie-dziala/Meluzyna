@@ -5,6 +5,8 @@ from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, selec
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
+from fastapi.middleware.cors import CORSMiddleware
+
 
 DB_USER = "hack"
 DB_PASS = "HackNation!"
@@ -77,6 +79,18 @@ class SimpleScoreSchema(BaseModel):
     class Config:
         from_attributes = True
 app = FastAPI()
+
+origins = [
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,     
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 async def get_db():
