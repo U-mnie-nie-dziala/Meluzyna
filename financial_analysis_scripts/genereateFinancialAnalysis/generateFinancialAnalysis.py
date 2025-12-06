@@ -6,6 +6,16 @@ import concurrent.futures
 import pandas as pd
 import yfinance as yf
 import logging
+import psycopg2
+from psycopg2 import sql
+
+DB_CONFIG = {
+    "host": "212.132.76.195",
+    "port": "5433",
+    "database": "hacknation_db",
+    "user": "hack",
+    "password": "HackNation!"
+}
 
 #log config
 logging.basicConfig(
@@ -43,7 +53,7 @@ YFINANCE_SECTOR_FALLBACK = {
 PKD_DESCRIPTIONS = {
     "B": "Górnictwo", "C": "Przetwórstwo", "D": "Energetyka", "F": "Budownictwo",
     "G": "Handel", "J": "IT i Media", "K": "Finanse", "L": "Nieruchomości",
-    "M": "Nauka", "Q": "Opieka Zdrowotna", "Inne": "Pozostałe"
+    "M": "Nauka", "Q": "Opieka Zdrowotna", "": "Pozostałe"
 }
 
 
@@ -134,7 +144,7 @@ def fetch_financial_data(ticker):
             return None
 
         pkd_id = YFINANCE_INDUSTRY_TO_PKD.get(info.get('industry', ''),
-                                              YFINANCE_SECTOR_FALLBACK.get(info.get('sector', ''), "Inne"))
+                                              YFINANCE_SECTOR_FALLBACK.get(info.get('sector', ''), ""))
 
         return {
             'PKD_ID': pkd_id,
@@ -171,8 +181,7 @@ def process_market_data(tickers):
 
 
 def generate_report(df):
-    logger.info("--- KROK 3: SCORING I RAPORT ---")
-
+    logger.info("--- KROK 3: OBLICZANIE WSKAŹNIKÓW ---")
     cols = ['MarketCap', 'Revenue', 'PE_Trailing', 'PB_Ratio', 'ROE', 'ProfitMargin', 'DividendYield']
     for c in cols: df[c] = pd.to_numeric(df[c], errors='coerce')
 
@@ -195,9 +204,9 @@ def generate_report(df):
     })
 
     agg.columns = ['_'.join(c).strip() for c in agg.columns.values]
-    agg = agg.sort_values(by='Revenue_get_sum', ascending=False)
 
-    report = {}
+    # WAŻNE: Tu musi być LISTA, nie słownik
+    report_list = []
 
     for pkd, row in agg.iterrows():
         if row['MarketCap_get_count'] < 3: continue
@@ -207,6 +216,7 @@ def generate_report(df):
         div = row.get('DividendYield_get_median', 0)
         pe = row.get('PE_Trailing_get_median', 0)
 
+        # Scoring
         s_margin = min((max(0, margin) / 0.15), 1.0) * 25
         s_roe = min((max(0, roe) / 0.12), 1.0) * 15
         s_scale = min(row['MarketCap_get_count'] / 10, 1.0) * 10
@@ -218,55 +228,112 @@ def generate_report(df):
         else:
             s_pe = 0
 
-        final_score = s_margin + s_roe + s_scale + s_div + s_pe
-        final_score = min(100, final_score)
+        final_score = min(100, s_margin + s_roe + s_scale + s_div + s_pe)
 
         if final_score >= 80:
-            rating = "A"
+            rating = "A (Strong)"
         elif final_score >= 60:
-            rating = "B"
+            rating = "B (Stable)"
         elif final_score >= 40:
-            rating = "C"
+            rating = "C (Weak)"
         else:
-            rating = "D"
+            rating = "D (Speculative)"
 
-        def clean(v):
-            return None if pd.isna(v) else v
+        def clean_decimal(v):
+            if pd.isna(v) or v is None: return 0.0
+            return float(v)
 
-        report[pkd] = {
-            "section_name": PKD_DESCRIPTIONS.get(pkd, pkd),
+        def clean_int(v):
+            if pd.isna(v) or v is None: return 0
+            return int(v)
+
+        # Tworzymy obiekt sekcji
+        section_data = {
+            "section_code": pkd,  # To pole jest kluczowe dla bazy danych
+            "section_name": PKD_DESCRIPTIONS.get(pkd, pkd)[:20],
             "safety_score": int(final_score),
-            "rating": rating,
-            "financial_health": {
-                "median_margin": clean(margin),
-                "median_roe": clean(roe),
-                "median_pe": clean(pe),
-                "median_dividend_yield": clean(div)
-            },
-            "market_data": {
-                "companies_count": int(row['MarketCap_get_count']),
-                "total_cap_pln": clean(row['MarketCap_get_sum'])
-            }
+            "rating": rating[:20],
+            "median_margin": clean_decimal(margin),
+            "median_roe": clean_decimal(roe),
+            "median_pe": clean_decimal(pe),
+            "median_dividend_yield": clean_decimal(div),
+            "companies_count": clean_int(row['MarketCap_get_count']),
+            "total_cap_pln": clean_int(row['MarketCap_get_sum'])
         }
 
-    return report
+        # Dodajemy do LISTY
+        report_list.append(section_data)
 
+    return report_list
+
+
+def save_to_database(report_data):
+    logger.info("--- KROK 4: ZAPIS DO BAZY DANYCH ---")
+
+    conn = None
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+
+        cur.execute("SELECT MAX(Id) FROM Report;")
+        max_id = cur.fetchone()[0]
+        new_report_id = 1 if max_id is None else max_id + 1
+
+        today = datetime.datetime.now().date()
+
+        insert_report_query = "INSERT INTO Report (Id, date) VALUES (%s, %s);"
+        cur.execute(insert_report_query, (new_report_id, today))
+        logger.info(f"Utworzono Raport ID: {new_report_id}")
+
+        insert_section_query = """
+                               INSERT INTO Section (Id, Report_Id, Section_code, Section_name, Safety_score, Rating, \
+                                                    Median_margin, Median_roe, Median_pe, Median_divident_yield, \
+                                                    Companies_count, total_cap_pln) \
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s); \
+                               """
+
+        cur.execute("SELECT MAX(Id) FROM Section;")
+        max_sec_id = cur.fetchone()[0]
+        current_sec_id = 1 if max_sec_id is None else max_sec_id + 1
+
+        for section in report_data:
+            cur.execute(insert_section_query, (
+                current_sec_id,
+                new_report_id,
+                section['section_code'],
+                section['section_name'],
+                section['safety_score'],
+                section['rating'],
+                section['median_margin'],
+                section['median_roe'],
+                section['median_pe'],
+                section['median_dividend_yield'],
+                section['companies_count'],
+                section['total_cap_pln']
+            ))
+            current_sec_id += 1
+
+        conn.commit()
+        logger.info(f"Zapisano {len(report_data)} sekcji do bazy.")
+
+    except Exception as e:
+        logger.error(f"Błąd bazy danych: {e}")
+        if conn: conn.rollback()
+    finally:
+        if conn: conn.close()
 
 def main():
     logger.info("=== START ===")
     start_time = time.time()
 
-    # 1. Update Tickers
     tickers = update_tickers()
     if not tickers: return
 
-    # 2. Fetch Data
     df = process_market_data(tickers)
-
-    # 3. Report
     report = generate_report(df)
 
-    # 4. Save
+    save_to_database(report)
+
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     path = f"{OUTPUT_DIR}/financial_report_{today}.json"
     with open(path, 'w', encoding='utf-8') as f:

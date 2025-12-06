@@ -1,152 +1,122 @@
-{
-    "D": {
-        "section_name": "Energetyka",
-        "safety_score": 62,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.0015,
-            "median_roe": 0.019525,
-            "median_pe": 7.691588,
-            "median_dividend_yield": 4.484999999999999
-        },
-        "market_data": {
-            "companies_count": 22,
-            "total_cap_pln": 317045898970.0
-        }
-    },
-    "K": {
-        "section_name": "Finanse",
-        "safety_score": 97,
-        "rating": "A (Strong)",
-        "financial_health": {
-            "median_margin": 0.171854995,
-            "median_roe": 0.09844,
-            "median_pe": 9.586895,
-            "median_dividend_yield": 6.845000000000001
-        },
-        "market_data": {
-            "companies_count": 46,
-            "total_cap_pln": 1445096400851.0
-        }
-    },
-    "G": {
-        "section_name": "Handel",
-        "safety_score": 78,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.0332549985,
-            "median_roe": 0.10233,
-            "median_pe": 12.177121,
-            "median_dividend_yield": 4.635
-        },
-        "market_data": {
-            "companies_count": 68,
-            "total_cap_pln": 201927074236.0
-        }
-    },
-    "J": {
-        "section_name": "IT i Media",
-        "safety_score": 80,
-        "rating": "A (Strong)",
-        "financial_health": {
-            "median_margin": 0.042600001,
-            "median_roe": 0.10722500500000001,
-            "median_pe": 13.08839,
-            "median_dividend_yield": 3.965
-        },
-        "market_data": {
-            "companies_count": 90,
-            "total_cap_pln": 96286733711.0
-        }
-    },
-    "C": {
-        "section_name": "Przetwórstwo",
-        "safety_score": 71,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.030990001,
-            "median_roe": 0.0532449965,
-            "median_pe": 10.8739835,
-            "median_dividend_yield": 3.89
-        },
-        "market_data": {
-            "companies_count": 74,
-            "total_cap_pln": 48168818846.0
-        }
-    },
-    "F": {
-        "section_name": "Budownictwo",
-        "safety_score": 74,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.030725,
-            "median_roe": 0.074099995,
-            "median_pe": 15.4688655,
-            "median_dividend_yield": 4.18
-        },
-        "market_data": {
-            "companies_count": 28,
-            "total_cap_pln": 27676598058.0
-        }
-    },
-    "Q": {
-        "section_name": "Opieka Zdrowotna",
-        "safety_score": 76,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.012105000000000001,
-            "median_roe": 0.11675999,
-            "median_pe": 17.1723425,
-            "median_dividend_yield": 2.64
-        },
-        "market_data": {
-            "companies_count": 10,
-            "total_cap_pln": 41254991333.0
-        }
-    },
-    "L": {
-        "section_name": "Nieruchomości",
-        "safety_score": 76,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.063134999,
-            "median_roe": 0.047494998499999996,
-            "median_pe": 12.326769500000001,
-            "median_dividend_yield": 6.29
-        },
-        "market_data": {
-            "companies_count": 28,
-            "total_cap_pln": 33572349830.0
-        }
-    },
-    "M": {
-        "section_name": "Nauka",
-        "safety_score": 60,
-        "rating": "B (Stable)",
-        "financial_health": {
-            "median_margin": 0.0,
-            "median_roe": -0.214515,
-            "median_pe": 17.4604745,
-            "median_dividend_yield": 2.675
-        },
-        "market_data": {
-            "companies_count": 17,
-            "total_cap_pln": 11287823876.0
-        }
-    },
-    "Inne": {
+[
+    {
+        "section_code": "",
         "section_name": "Pozostałe",
         "safety_score": 100,
         "rating": "A (Strong)",
-        "financial_health": {
-            "median_margin": -0.27392500000000003,
-            "median_roe": -0.368465015,
-            "median_pe": 15.915682,
-            "median_dividend_yield": null
-        },
-        "market_data": {
-            "companies_count": 3,
-            "total_cap_pln": 5653790832.0
-        }
+        "median_margin": -0.27392500000000003,
+        "median_roe": -0.368465015,
+        "median_pe": 15.915682,
+        "median_dividend_yield": 0.0,
+        "companies_count": 3,
+        "total_cap_pln": 5653790832
+    },
+    {
+        "section_code": "C",
+        "section_name": "Przetwórstwo",
+        "safety_score": 71,
+        "rating": "B (Stable)",
+        "median_margin": 0.030990001,
+        "median_roe": 0.0532449965,
+        "median_pe": 10.8739835,
+        "median_dividend_yield": 3.89,
+        "companies_count": 74,
+        "total_cap_pln": 48168818846
+    },
+    {
+        "section_code": "D",
+        "section_name": "Energetyka",
+        "safety_score": 62,
+        "rating": "B (Stable)",
+        "median_margin": 0.0015,
+        "median_roe": 0.019525,
+        "median_pe": 7.691588,
+        "median_dividend_yield": 4.484999999999999,
+        "companies_count": 22,
+        "total_cap_pln": 317045898970
+    },
+    {
+        "section_code": "F",
+        "section_name": "Budownictwo",
+        "safety_score": 74,
+        "rating": "B (Stable)",
+        "median_margin": 0.030725,
+        "median_roe": 0.074099995,
+        "median_pe": 15.4688655,
+        "median_dividend_yield": 4.18,
+        "companies_count": 28,
+        "total_cap_pln": 27676598058
+    },
+    {
+        "section_code": "G",
+        "section_name": "Handel",
+        "safety_score": 78,
+        "rating": "B (Stable)",
+        "median_margin": 0.0332549985,
+        "median_roe": 0.10233,
+        "median_pe": 12.177121,
+        "median_dividend_yield": 4.635,
+        "companies_count": 68,
+        "total_cap_pln": 201927074236
+    },
+    {
+        "section_code": "J",
+        "section_name": "IT i Media",
+        "safety_score": 80,
+        "rating": "A (Strong)",
+        "median_margin": 0.042600001,
+        "median_roe": 0.10722500500000001,
+        "median_pe": 13.08839,
+        "median_dividend_yield": 3.965,
+        "companies_count": 90,
+        "total_cap_pln": 96286733711
+    },
+    {
+        "section_code": "K",
+        "section_name": "Finanse",
+        "safety_score": 97,
+        "rating": "A (Strong)",
+        "median_margin": 0.171854995,
+        "median_roe": 0.09844,
+        "median_pe": 9.586895,
+        "median_dividend_yield": 6.845000000000001,
+        "companies_count": 46,
+        "total_cap_pln": 1445096400851
+    },
+    {
+        "section_code": "L",
+        "section_name": "Nieruchomości",
+        "safety_score": 76,
+        "rating": "B (Stable)",
+        "median_margin": 0.063134999,
+        "median_roe": 0.047494998499999996,
+        "median_pe": 12.326769500000001,
+        "median_dividend_yield": 6.29,
+        "companies_count": 28,
+        "total_cap_pln": 33572349830
+    },
+    {
+        "section_code": "M",
+        "section_name": "Nauka",
+        "safety_score": 60,
+        "rating": "B (Stable)",
+        "median_margin": 0.0,
+        "median_roe": -0.214515,
+        "median_pe": 17.4604745,
+        "median_dividend_yield": 2.675,
+        "companies_count": 17,
+        "total_cap_pln": 11287823876
+    },
+    {
+        "section_code": "Q",
+        "section_name": "Opieka Zdrowotna",
+        "safety_score": 76,
+        "rating": "B (Stable)",
+        "median_margin": 0.012105000000000001,
+        "median_roe": 0.11675999,
+        "median_pe": 17.1723425,
+        "median_dividend_yield": 2.64,
+        "companies_count": 10,
+        "total_cap_pln": 41254991333
     }
-}
+]

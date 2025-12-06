@@ -147,3 +147,85 @@
 2025-12-06 19:51:51,696 - INFO - --- KROK 3: SCORING I RAPORT ---
 2025-12-06 19:51:51,706 - INFO - Zapisano raport: reports_financial/financial_report_2025-12-06.json
 2025-12-06 19:51:51,706 - INFO - Czas wykonania: 66.92s
+2025-12-06 21:12:41,790 - INFO - === START ===
+2025-12-06 21:12:41,790 - INFO - --- KROK 1: AKTUALIZACJA LISTY TICKERÓW ---
+2025-12-06 21:12:41,790 - INFO - Wczytano 403 tickerów z cache.
+2025-12-06 21:12:42,032 - INFO - Skanowanie 407 spółek w poszukiwaniu nowych tickerów...
+2025-12-06 21:12:48,227 - INFO - Postęp: 100/407
+2025-12-06 21:12:53,627 - INFO - Postęp: 200/407
+2025-12-06 21:12:59,440 - INFO - Postęp: 300/407
+2025-12-06 21:13:07,174 - INFO - Postęp: 400/407
+2025-12-06 21:13:09,231 - INFO - Znaleziono 1 nowych spółek.
+2025-12-06 21:13:09,233 - INFO - --- KROK 2: ANALIZA FINANSOWA ---
+2025-12-06 21:13:12,155 - INFO - Pobrano dane: 50/404
+2025-12-06 21:13:14,271 - INFO - Pobrano dane: 100/404
+2025-12-06 21:13:16,463 - INFO - Pobrano dane: 150/404
+2025-12-06 21:13:18,801 - INFO - Pobrano dane: 200/404
+2025-12-06 21:13:21,078 - INFO - Pobrano dane: 250/404
+2025-12-06 21:13:21,911 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: OVO.WA"}}}
+2025-12-06 21:13:23,394 - INFO - Pobrano dane: 300/404
+2025-12-06 21:13:24,109 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: RFK.WA"}}}
+2025-12-06 21:13:25,728 - INFO - Pobrano dane: 350/404
+2025-12-06 21:13:27,369 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: WIS.WA"}}}
+2025-12-06 21:13:28,040 - INFO - Pobrano dane: 400/404
+2025-12-06 21:13:28,329 - INFO - --- KROK 3: SCORING I RAPORT ---
+2025-12-06 21:13:28,339 - INFO - --- KROK 4: ZAPIS DO BAZY DANYCH ---
+2025-12-06 21:13:28,619 - INFO - Utworzono Raport ID: 1
+2025-12-06 21:13:28,645 - ERROR - Błąd bazy danych: string indices must be integers, not 'str'
+2025-12-06 21:13:28,673 - INFO - Zapisano raport: reports_financial/financial_report_2025-12-06.json
+2025-12-06 21:13:28,673 - INFO - Czas wykonania: 46.88s
+2025-12-06 21:16:30,738 - INFO - === START ===
+2025-12-06 21:16:30,738 - INFO - --- KROK 1: AKTUALIZACJA LISTY TICKERÓW ---
+2025-12-06 21:16:30,739 - INFO - Wczytano 403 tickerów z cache.
+2025-12-06 21:16:30,874 - INFO - Skanowanie 407 spółek w poszukiwaniu nowych tickerów...
+2025-12-06 21:16:36,128 - INFO - Postęp: 100/407
+2025-12-06 21:16:40,995 - INFO - Postęp: 200/407
+2025-12-06 21:16:45,358 - INFO - Postęp: 300/407
+2025-12-06 21:16:49,343 - INFO - Postęp: 400/407
+2025-12-06 21:16:50,081 - INFO - Znaleziono 1 nowych spółek.
+2025-12-06 21:16:50,083 - INFO - --- KROK 2: ANALIZA FINANSOWA ---
+2025-12-06 21:16:53,197 - INFO - Pobrano dane: 50/404
+2025-12-06 21:16:55,588 - INFO - Pobrano dane: 100/404
+2025-12-06 21:16:57,845 - INFO - Pobrano dane: 150/404
+2025-12-06 21:17:00,105 - INFO - Pobrano dane: 200/404
+2025-12-06 21:17:02,399 - INFO - Pobrano dane: 250/404
+2025-12-06 21:17:03,244 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: OVO.WA"}}}
+2025-12-06 21:17:04,749 - INFO - Pobrano dane: 300/404
+2025-12-06 21:17:05,284 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: RFK.WA"}}}
+2025-12-06 21:17:07,121 - INFO - Pobrano dane: 350/404
+2025-12-06 21:17:08,726 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: WIS.WA"}}}
+2025-12-06 21:17:09,413 - INFO - Pobrano dane: 400/404
+2025-12-06 21:17:09,669 - INFO - --- KROK 3: OBLICZANIE WSKAŹNIKÓW ---
+2025-12-06 21:17:09,679 - INFO - --- KROK 4: ZAPIS DO BAZY DANYCH ---
+2025-12-06 21:17:09,955 - INFO - Utworzono Raport ID: 1
+2025-12-06 21:17:10,108 - ERROR - Błąd bazy danych: value too long for type character varying(2)
+
+2025-12-06 21:17:10,135 - INFO - Zapisano raport: reports_financial/financial_report_2025-12-06.json
+2025-12-06 21:17:10,136 - INFO - Czas wykonania: 39.4s
+2025-12-06 21:20:19,027 - INFO - === START ===
+2025-12-06 21:20:19,027 - INFO - --- KROK 1: AKTUALIZACJA LISTY TICKERÓW ---
+2025-12-06 21:20:19,027 - INFO - Wczytano 403 tickerów z cache.
+2025-12-06 21:20:20,051 - INFO - Skanowanie 407 spółek w poszukiwaniu nowych tickerów...
+2025-12-06 21:20:25,448 - INFO - Postęp: 100/407
+2025-12-06 21:20:29,842 - INFO - Postęp: 200/407
+2025-12-06 21:20:33,868 - INFO - Postęp: 300/407
+2025-12-06 21:20:37,794 - INFO - Postęp: 400/407
+2025-12-06 21:20:38,275 - INFO - Znaleziono 1 nowych spółek.
+2025-12-06 21:20:38,277 - INFO - --- KROK 2: ANALIZA FINANSOWA ---
+2025-12-06 21:20:41,323 - INFO - Pobrano dane: 50/404
+2025-12-06 21:20:43,544 - INFO - Pobrano dane: 100/404
+2025-12-06 21:20:45,740 - INFO - Pobrano dane: 150/404
+2025-12-06 21:20:47,925 - INFO - Pobrano dane: 200/404
+2025-12-06 21:20:50,149 - INFO - Pobrano dane: 250/404
+2025-12-06 21:20:51,068 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: OVO.WA"}}}
+2025-12-06 21:20:52,549 - INFO - Pobrano dane: 300/404
+2025-12-06 21:20:53,268 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: RFK.WA"}}}
+2025-12-06 21:20:55,183 - INFO - Pobrano dane: 350/404
+2025-12-06 21:20:56,817 - ERROR - HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: WIS.WA"}}}
+2025-12-06 21:20:57,527 - INFO - Pobrano dane: 400/404
+2025-12-06 21:20:57,685 - INFO - --- KROK 3: OBLICZANIE WSKAŹNIKÓW ---
+2025-12-06 21:20:57,692 - INFO - --- KROK 4: ZAPIS DO BAZY DANYCH ---
+2025-12-06 21:20:57,981 - INFO - Utworzono Raport ID: 1
+2025-12-06 21:20:58,320 - INFO - Zapisano 10 sekcji do bazy.
+2025-12-06 21:20:58,321 - INFO - Zapisano raport: reports_financial/financial_report_2025-12-06.json
+2025-12-06 21:20:58,321 - INFO - Czas wykonania: 39.29s
