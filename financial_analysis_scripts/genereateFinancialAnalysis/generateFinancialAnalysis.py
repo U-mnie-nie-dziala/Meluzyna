@@ -7,9 +7,7 @@ import pandas as pd
 import yfinance as yf
 import logging
 
-# ==========================================
-# 0. KONFIGURACJA LOGOWANIA
-# ==========================================
+#log config
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -20,9 +18,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GPW_Fin_Only")
 
-# ==========================================
-# 1. KONFIGURACJA I MAPOWANIA
-# ==========================================
 CACHE_FILE = "tickers_cache.json"
 OUTPUT_DIR = "reports_financial"
 
@@ -52,9 +47,6 @@ PKD_DESCRIPTIONS = {
 }
 
 
-# ==========================================
-# 2. LOGIKA SCRAPOWANIA (BEZ UPADŁOŚCI)
-# ==========================================
 
 def fetch_ticker_from_slug(slug):
     """Pobiera ticker ze strony szczegółów spółki"""
@@ -88,7 +80,6 @@ def resolve_company_ticker(row):
 def update_tickers():
     logger.info("--- KROK 1: AKTUALIZACJA LISTY TICKERÓW ---")
 
-    # 1. Wczytaj Cache
     cached_tickers = set()
     if os.path.exists(CACHE_FILE):
         try:
@@ -100,7 +91,6 @@ def update_tickers():
         except Exception as e:
             logger.warning(f"Błąd cache: {e}. Tworzę nowy.")
 
-    # 2. Pobierz listę ze strony (Szukamy nowych firm)
     url = "https://www.bankier.pl/gielda/notowania/akcje"
     try:
         df_market = pd.read_html(url)[0]
@@ -128,7 +118,6 @@ def update_tickers():
 
     if new_found > 0:
         logger.info(f"Znaleziono {new_found} nowych spółek.")
-        # Zapisz Cache
         sorted_tickers = sorted(list(cached_tickers))
         with open(CACHE_FILE, 'w') as f:
             json.dump(sorted_tickers, f)
@@ -136,11 +125,6 @@ def update_tickers():
         logger.info("Brak nowych spółek. Używam istniejącej listy.")
 
     return sorted(list(cached_tickers))
-
-
-# ==========================================
-# 3. POBIERANIE DANYCH FINANSOWYCH
-# ==========================================
 
 def fetch_financial_data(ticker):
     try:
@@ -186,10 +170,6 @@ def process_market_data(tickers):
     return pd.DataFrame(financial_data)
 
 
-# ==========================================
-# 4. RAPORTOWANIE (BEZ BANKRUCTW)
-# ==========================================
-
 def generate_report(df):
     logger.info("--- KROK 3: SCORING I RAPORT ---")
 
@@ -222,19 +202,17 @@ def generate_report(df):
     for pkd, row in agg.iterrows():
         if row['MarketCap_get_count'] < 3: continue
 
-        # Metryki
         margin = row.get('ProfitMargin_get_median', 0)
         roe = row.get('ROE_get_median', 0)
         div = row.get('DividendYield_get_median', 0)
         pe = row.get('PE_Trailing_get_median', 0)
 
-        # Scoring (Czysto finansowy)
         s_margin = min((max(0, margin) / 0.15), 1.0) * 25
         s_roe = min((max(0, roe) / 0.12), 1.0) * 15
         s_scale = min(row['MarketCap_get_count'] / 10, 1.0) * 10
         s_div = min((div / 0.04), 1.0) * 20
         if 5 <= pe <= 25:
-            s_pe = 30  # Zwiększona waga wyceny, skoro nie ma kary za ryzyko
+            s_pe = 30
         elif 25 < pe <= 40:
             s_pe = 10
         else:
@@ -244,13 +222,13 @@ def generate_report(df):
         final_score = min(100, final_score)
 
         if final_score >= 80:
-            rating = "A (Strong)"
+            rating = "A"
         elif final_score >= 60:
-            rating = "B (Stable)"
+            rating = "B"
         elif final_score >= 40:
-            rating = "C (Weak)"
+            rating = "C"
         else:
-            rating = "D (Speculative)"
+            rating = "D"
 
         def clean(v):
             return None if pd.isna(v) else v
