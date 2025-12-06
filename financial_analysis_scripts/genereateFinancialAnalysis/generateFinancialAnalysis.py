@@ -1,139 +1,160 @@
-import time
-import yfinance as yf
-import pandas as pd
-import concurrent.futures
-import json
-import re
 import os
+import json
+import time
+import datetime
+import concurrent.futures
+import pandas as pd
+import yfinance as yf
+import logging
 
-# --- CONFIGURATION ---
-CACHE_FILE = "tickers_cache.json"  # The file storing the list ["ABC.WA", "DEF.WA"]
+# ==========================================
+# 0. KONFIGURACJA LOGOWANIA
+# ==========================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("execution.log", mode='a', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("GPW_Fin_Only")
 
-# --- MAPPINGS (PKD/Industry) ---
+# ==========================================
+# 1. KONFIGURACJA I MAPOWANIA
+# ==========================================
+CACHE_FILE = "tickers_cache.json"
+OUTPUT_DIR = "reports_financial"
+
+if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
+
 YFINANCE_INDUSTRY_TO_PKD = {
     "Engineering & Construction": "F", "Residential Construction": "F", "Building Materials": "F",
     "Apparel Retail": "G", "Specialty Retail": "G", "Grocery Stores": "G", "Internet Retail": "G",
     "Auto Parts": "G", "Auto & Truck Dealerships": "G", "Luxury Goods": "G",
     "Software - Infrastructure": "J", "Software - Application": "J", "Electronic Gaming & Multimedia": "J",
     "Entertainment": "J", "Telecom Services": "J", "Internet Content & Information": "J",
-    "Banks - Regional": "K", "Insurance - Diversified": "K", "Insurance - Life": "K",
-    "Capital Markets": "K", "Asset Management": "K", "Credit Services": "K",
+    "Banks - Regional": "K", "Insurance - Diversified": "K", "Insurance - Life": "K", "Capital Markets": "K",
     "Other Industrial Metals & Mining": "B", "Copper": "B", "Coal": "B", "Oil & Gas E&P": "B",
-    "Oil & Gas Integrated": "C", "Chemicals": "C", "Specialty Chemicals": "C", "Aerospace & Defense": "C",
-    "Packaging & Containers": "C", "Food Distribution": "C", "Farm Products": "C",
-    "Utilities - Regulated Electric": "D", "Utilities - Renewable": "D", "Utilities - Independent Power Producers": "D",
-    "Real Estate - Development": "L", "Real Estate Services": "L", "REIT - Diversified": "L",
+    "Chemicals": "C", "Specialty Chemicals": "C", "Aerospace & Defense": "C", "Packaging & Containers": "C",
+    "Utilities - Regulated Electric": "D", "Utilities - Renewable": "D", "Real Estate - Development": "L",
     "Medical Instruments & Supplies": "C", "Diagnostics & Research": "M", "Biotechnology": "M", "Hospitals": "Q"
 }
-
 YFINANCE_SECTOR_FALLBACK = {
     "Financial Services": "K", "Technology": "J", "Communication Services": "J", "Energy": "D",
     "Consumer Cyclical": "G", "Consumer Defensive": "G", "Industrials": "C", "Basic Materials": "C",
     "Real Estate": "L", "Healthcare": "Q", "Utilities": "D"
 }
-
 PKD_DESCRIPTIONS = {
-    "B": "Górnictwo i wydobywanie", "C": "Przetwórstwo przemysłowe", "D": "Wytwarzanie i zaopatrywanie w energię",
-    "F": "Budownictwo", "G": "Handel hurtowy i detaliczny", "J": "Informacja i komunikacja",
-    "K": "Działalność finansowa i ubezpieczeniowa", "L": "Obsługa rynku nieruchomości",
-    "M": "Działalność profesjonalna, naukowa i techniczna", "Q": "Opieka zdrowotna", "Inne": "Pozostała działalność"
+    "B": "Górnictwo", "C": "Przetwórstwo", "D": "Energetyka", "F": "Budownictwo",
+    "G": "Handel", "J": "IT i Media", "K": "Finanse", "L": "Nieruchomości",
+    "M": "Nauka", "Q": "Opieka Zdrowotna", "Inne": "Pozostałe"
 }
 
 
-# --- TICKER ACQUISITION LOGIC ---
+# ==========================================
+# 2. LOGIKA SCRAPOWANIA (BEZ UPADŁOŚCI)
+# ==========================================
 
-def fetch_ticker_gpw(stock_slug: str) -> str:
-    """Scrapes ticker for a single company from Bankier.pl"""
-    details_url = f"https://www.bankier.pl/gielda/notowania/akcje/{stock_slug}/podstawowe-dane"
+def fetch_ticker_from_slug(slug):
+    """Pobiera ticker ze strony szczegółów spółki"""
     try:
-        detail_tables = pd.read_html(details_url, match="Ticker GPW")
-        if detail_tables:
-            return detail_tables[0].iloc[3, 1]
+        url = f"https://www.bankier.pl/gielda/notowania/akcje/{slug}/podstawowe-dane"
+        tables = pd.read_html(url, match="Ticker GPW")
+        if tables:
+            ticker = tables[0].iloc[3, 1]
+            return ticker
+    except:
+        pass
+    return None
+
+
+def resolve_company_ticker(row):
+    """Przetwarza wiersz z głównej tabeli, aby znaleźć ticker"""
+    try:
+        raw_name = str(row.iloc[0])
+        # Pobieramy 'slug' z nazwy (pierwsze słowo), aby znaleźć stronę z tickerem
+        slug = raw_name.split(" ")[0].strip()
+
+        ticker = fetch_ticker_from_slug(slug)
+
+        if ticker:
+            return f"{ticker}.WA"
     except Exception:
         pass
     return None
 
 
-def scrape_all_tickers():
-    """Scrapes ALL tickers from scratch (Slow)"""
-    print("Cache not found. Starting full scrape from Bankier.pl...")
-    LIST_URL = "https://www.bankier.pl/gielda/notowania/akcje"
-    try:
-        stock_table = pd.read_html(LIST_URL)[0]
-        slugs = stock_table.iloc[:, 0].astype(str).str.strip().dropna().tolist()
-    except Exception as e:
-        print(f"Error fetching master list: {e}")
-        return []
+def update_tickers():
+    logger.info("--- KROK 1: AKTUALIZACJA LISTY TICKERÓW ---")
 
-    tickers = []
-    print(f"Found {len(slugs)} companies. Scraping details...")
-
-    for i, slug in enumerate(slugs):
-        t = fetch_ticker_gpw(slug)
-        if t:
-            t_wa = f"{t}.WA"
-            tickers.append(t_wa)
-            print(f"[{i + 1}/{len(slugs)}] Got: {t_wa}")
-        time.sleep(0.5)  # Be polite to the server
-
-    return sorted(list(set(tickers)))
-
-
-def get_tickers_cached():
-    """
-    1. Checks if 'tickers_cache.json' exists.
-    2. IF YES: Loads it, cleans 'nan.WA', returns list.
-    3. IF NO: Runs scraper, saves file, returns list.
-    """
+    # 1. Wczytaj Cache
+    cached_tickers = set()
     if os.path.exists(CACHE_FILE):
-        print(f"Found cache file: {CACHE_FILE}")
         try:
             with open(CACHE_FILE, 'r') as f:
-                tickers = json.load(f)
-
-            # --- CLEANING DATA ---
-            # Remove duplicates and garbage like 'nan.WA'
-            cleaned_tickers = [t for t in tickers if t and "nan.WA" not in t]
-
-            print(f"Loaded {len(cleaned_tickers)} tickers from cache.")
-            return cleaned_tickers
+                data = json.load(f)
+                clean_list = [t for t in data if t and "nan" not in str(t)]
+                cached_tickers = set(clean_list)
+            logger.info(f"Wczytano {len(cached_tickers)} tickerów z cache.")
         except Exception as e:
-            print(f"Error reading cache: {e}. Re-scraping...")
+            logger.warning(f"Błąd cache: {e}. Tworzę nowy.")
 
-    # If we are here, we need to scrape
-    tickers = scrape_all_tickers()
-
-    if tickers:
-        with open(CACHE_FILE, 'w') as f:
-            json.dump(tickers, f)
-        print(f"Saved {len(tickers)} tickers to {CACHE_FILE}")
-
-    return tickers
-
-
-# --- FINANCIAL ANALYSIS LOGIC ---
-
-def get_raw_data(ticker):
+    # 2. Pobierz listę ze strony (Szukamy nowych firm)
+    url = "https://www.bankier.pl/gielda/notowania/akcje"
     try:
-        # Ticker format check
-        if not ticker.endswith('.WA'): ticker += '.WA'
+        df_market = pd.read_html(url)[0]
+    except Exception as e:
+        logger.error(f"Błąd pobierania strony głównej: {e}")
+        return list(cached_tickers)
 
+    logger.info(f"Skanowanie {len(df_market)} spółek w poszukiwaniu nowych tickerów...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = [executor.submit(resolve_company_ticker, row) for _, row in df_market.iterrows()]
+
+        completed = 0
+        new_found = 0
+        for future in concurrent.futures.as_completed(futures):
+            ticker = future.result()
+            completed += 1
+
+            if ticker and ticker not in cached_tickers:
+                cached_tickers.add(ticker)
+                new_found += 1
+
+            if completed % 100 == 0:
+                logger.info(f"Postęp: {completed}/{len(df_market)}")
+
+    if new_found > 0:
+        logger.info(f"Znaleziono {new_found} nowych spółek.")
+        # Zapisz Cache
+        sorted_tickers = sorted(list(cached_tickers))
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(sorted_tickers, f)
+    else:
+        logger.info("Brak nowych spółek. Używam istniejącej listy.")
+
+    return sorted(list(cached_tickers))
+
+
+# ==========================================
+# 3. POBIERANIE DANYCH FINANSOWYCH
+# ==========================================
+
+def fetch_financial_data(ticker):
+    try:
         info = yf.Ticker(ticker).info
 
-        # Filter out dead tickers
         if 'shortName' not in info and 'symbol' not in info:
             return None
 
-        yf_industry = info.get('industry', '')
-        yf_sector = info.get('sector', '')
-
-        pkd_id = YFINANCE_INDUSTRY_TO_PKD.get(yf_industry)
-        if not pkd_id:
-            pkd_id = YFINANCE_SECTOR_FALLBACK.get(yf_sector, "Inne")
+        pkd_id = YFINANCE_INDUSTRY_TO_PKD.get(info.get('industry', ''),
+                                              YFINANCE_SECTOR_FALLBACK.get(info.get('sector', ''), "Inne"))
 
         return {
             'PKD_ID': pkd_id,
-            'YF_Industry': yf_industry,
+            'Ticker': ticker,
             'MarketCap': info.get('marketCap'),
             'Revenue': info.get('totalRevenue'),
             'PE_Trailing': info.get('trailingPE'),
@@ -146,40 +167,34 @@ def get_raw_data(ticker):
         return None
 
 
-def main():
-    # 1. GET TICKERS (CACHE OR SCRAPE)
-    tickers = get_tickers_cached()
-
-    if not tickers:
-        print("No tickers found. Exiting.")
-        return
-
-    # 2. GET FINANCIAL DATA
-    raw_data_list = []
-    print(f"\nAnalyzing {len(tickers)} companies...")
+def process_market_data(tickers):
+    logger.info("--- KROK 2: ANALIZA FINANSOWA ---")
+    financial_data = []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_ticker = {executor.submit(get_raw_data, t): t for t in tickers}
+        future_to_ticker = {executor.submit(fetch_financial_data, t): t for t in tickers}
+
         completed = 0
-        total = len(tickers)
         for future in concurrent.futures.as_completed(future_to_ticker):
             res = future.result()
             completed += 1
-            if completed % 20 == 0:
-                print(f"Progress: {completed}/{total}")
+            if completed % 50 == 0:
+                logger.info(f"Pobrano dane: {completed}/{len(tickers)}")
             if res:
-                raw_data_list.append(res)
+                financial_data.append(res)
 
-    if not raw_data_list:
-        print("No financial data found.")
-        return
+    return pd.DataFrame(financial_data)
 
-    # 3. AGGREGATE
-    df = pd.DataFrame(raw_data_list)
-    numeric_cols = ['MarketCap', 'Revenue', 'PE_Trailing', 'PB_Ratio', 'ROE', 'ProfitMargin', 'DividendYield']
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# ==========================================
+# 4. RAPORTOWANIE (BEZ BANKRUCTW)
+# ==========================================
+
+def generate_report(df):
+    logger.info("--- KROK 3: SCORING I RAPORT ---")
+
+    cols = ['MarketCap', 'Revenue', 'PE_Trailing', 'PB_Ratio', 'ROE', 'ProfitMargin', 'DividendYield']
+    for c in cols: df[c] = pd.to_numeric(df[c], errors='coerce')
 
     def get_median(x):
         return x.median()
@@ -190,56 +205,97 @@ def main():
     def get_count(x):
         return x.count()
 
-    aggregated = df.groupby('PKD_ID').agg({
+    agg = df.groupby('PKD_ID').agg({
         'MarketCap': [get_sum, get_count],
         'Revenue': get_sum,
         'PE_Trailing': get_median,
-        'PB_Ratio': get_median,
         'ROE': get_median,
         'ProfitMargin': get_median,
         'DividendYield': get_median
     })
 
-    aggregated.columns = ['_'.join(col).strip() for col in aggregated.columns.values]
+    agg.columns = ['_'.join(c).strip() for c in agg.columns.values]
+    agg = agg.sort_values(by='Revenue_get_sum', ascending=False)
 
-    output_json = {}
-    aggregated = aggregated.sort_values(by='Revenue_get_sum', ascending=False)
+    report = {}
 
-    for pkd_id, row in aggregated.iterrows():
-        if row['MarketCap_get_count'] < 2: continue
+    for pkd, row in agg.iterrows():
+        if row['MarketCap_get_count'] < 3: continue
 
-        def clean(val):
-            return None if pd.isna(val) else val
+        # Metryki
+        margin = row.get('ProfitMargin_get_median', 0)
+        roe = row.get('ROE_get_median', 0)
+        div = row.get('DividendYield_get_median', 0)
+        pe = row.get('PE_Trailing_get_median', 0)
 
-        nazwa_pelna = PKD_DESCRIPTIONS.get(pkd_id, f"Inne / Nieznana ({pkd_id})")
+        # Scoring (Czysto finansowy)
+        s_margin = min((max(0, margin) / 0.15), 1.0) * 25
+        s_roe = min((max(0, roe) / 0.12), 1.0) * 15
+        s_scale = min(row['MarketCap_get_count'] / 10, 1.0) * 10
+        s_div = min((div / 0.04), 1.0) * 20
+        if 5 <= pe <= 25:
+            s_pe = 30  # Zwiększona waga wyceny, skoro nie ma kary za ryzyko
+        elif 25 < pe <= 40:
+            s_pe = 10
+        else:
+            s_pe = 0
 
-        output_json[pkd_id] = {
-            "nazwa_sekcji": nazwa_pelna,
-            "statystyki": {
-                "liczba_firm": int(row['MarketCap_get_count']),
-                "kapitalizacja_suma": clean(row['MarketCap_get_sum']),
-                "przychody_suma": clean(row['Revenue_get_sum'])
+        final_score = s_margin + s_roe + s_scale + s_div + s_pe
+        final_score = min(100, final_score)
+
+        if final_score >= 80:
+            rating = "A (Strong)"
+        elif final_score >= 60:
+            rating = "B (Stable)"
+        elif final_score >= 40:
+            rating = "C (Weak)"
+        else:
+            rating = "D (Speculative)"
+
+        def clean(v):
+            return None if pd.isna(v) else v
+
+        report[pkd] = {
+            "section_name": PKD_DESCRIPTIONS.get(pkd, pkd),
+            "safety_score": int(final_score),
+            "rating": rating,
+            "financial_health": {
+                "median_margin": clean(margin),
+                "median_roe": clean(roe),
+                "median_pe": clean(pe),
+                "median_dividend_yield": clean(div)
             },
-            "wskazniki_mediana": {
-                "pe": clean(row['PE_Trailing_get_median']),
-                "pb": clean(row['PB_Ratio_get_median']),
-                "roe": clean(row['ROE_get_median']),
-                "marza_netto": clean(row['ProfitMargin_get_median']),
-                "dywidenda_yield": clean(row['DividendYield_get_median'])
+            "market_data": {
+                "companies_count": int(row['MarketCap_get_count']),
+                "total_cap_pln": clean(row['MarketCap_get_sum'])
             }
         }
 
-    filename = 'analiza_pkd_full.json'
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(output_json, f, indent=4, ensure_ascii=False)
+    return report
 
-    print(f"\nDone! Analysis saved to: {filename}")
 
-    # Preview
-    if output_json:
-        k = next(iter(output_json))
-        print(f"Example ({k}):")
-        print(json.dumps(output_json[k], indent=4, ensure_ascii=False))
+def main():
+    logger.info("=== START ===")
+    start_time = time.time()
+
+    # 1. Update Tickers
+    tickers = update_tickers()
+    if not tickers: return
+
+    # 2. Fetch Data
+    df = process_market_data(tickers)
+
+    # 3. Report
+    report = generate_report(df)
+
+    # 4. Save
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    path = f"{OUTPUT_DIR}/financial_report_{today}.json"
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(report, f, indent=4, ensure_ascii=False)
+
+    logger.info(f"Zapisano raport: {path}")
+    logger.info(f"Czas wykonania: {round(time.time() - start_time, 2)}s")
 
 
 if __name__ == "__main__":
