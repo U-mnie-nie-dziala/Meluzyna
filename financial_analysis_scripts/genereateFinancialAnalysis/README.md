@@ -67,7 +67,7 @@ Wypłacane dywidendy są ciężkie do zmanipulowania, im większe tym lepiej
 
 5: Wycena Rynkowa (Waga: 30 pkt)
 
-Najważniejszy filar w analizie bezpieczeństwa – ochrona przed kupowaniem "bańki spekulacyjnej".
+Ochrona przed kupowaniem "bańki spekulacyjnej".
 
     Metryka: Mediana Ceny do Zysku (P/E Ratio).
 
