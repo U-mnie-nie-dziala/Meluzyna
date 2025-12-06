@@ -1,7 +1,7 @@
 [
     {
         "section_code": "",
-        "section_name": "Pozostałe",
+        "section_name": "",
         "safety_score": 100,
         "rating": "A (Strong)",
         "median_margin": -0.27392500000000003,
@@ -13,27 +13,27 @@
     },
     {
         "section_code": "C",
-        "section_name": "Przetwórstwo",
-        "safety_score": 71,
+        "section_name": "Przemysł",
+        "safety_score": 73,
         "rating": "B (Stable)",
-        "median_margin": 0.030990001,
-        "median_roe": 0.0532449965,
-        "median_pe": 10.8739835,
-        "median_dividend_yield": 3.89,
-        "companies_count": 74,
-        "total_cap_pln": 48168818846
+        "median_margin": 0.0392,
+        "median_roe": 0.053839996,
+        "median_pe": 9.895833,
+        "median_dividend_yield": 4.91,
+        "companies_count": 71,
+        "total_cap_pln": 152929516556
     },
     {
         "section_code": "D",
         "section_name": "Energetyka",
-        "safety_score": 62,
+        "safety_score": 60,
         "rating": "B (Stable)",
-        "median_margin": 0.0015,
-        "median_roe": 0.019525,
-        "median_pe": 7.691588,
-        "median_dividend_yield": 4.484999999999999,
-        "companies_count": 22,
-        "total_cap_pln": 317045898970
+        "median_margin": 0.0,
+        "median_roe": 0.0023,
+        "median_pe": 6.54487185,
+        "median_dividend_yield": 3.66,
+        "companies_count": 21,
+        "total_cap_pln": 210633940698
     },
     {
         "section_code": "F",
@@ -53,11 +53,35 @@
         "safety_score": 78,
         "rating": "B (Stable)",
         "median_margin": 0.0332549985,
-        "median_roe": 0.10233,
-        "median_pe": 12.177121,
-        "median_dividend_yield": 4.635,
-        "companies_count": 68,
-        "total_cap_pln": 201927074236
+        "median_roe": 0.104355,
+        "median_pe": 12.378304,
+        "median_dividend_yield": 4.51,
+        "companies_count": 54,
+        "total_cap_pln": 176176172346
+    },
+    {
+        "section_code": "H",
+        "section_name": "Transport",
+        "safety_score": 55,
+        "rating": "C (Weak)",
+        "median_margin": -0.0062300004,
+        "median_roe": -0.00958,
+        "median_pe": 9.4712592,
+        "median_dividend_yield": 2.69,
+        "companies_count": 5,
+        "total_cap_pln": 6244178984
+    },
+    {
+        "section_code": "I",
+        "section_name": "Gastronomia i Hotele",
+        "safety_score": 35,
+        "rating": "D (Speculative)",
+        "median_margin": -0.0036699999999999997,
+        "median_roe": 0.00982,
+        "median_pe": 29.425725,
+        "median_dividend_yield": 2.6799999999999997,
+        "companies_count": 4,
+        "total_cap_pln": 3639256794
     },
     {
         "section_code": "J",
@@ -97,26 +121,38 @@
     },
     {
         "section_code": "M",
-        "section_name": "Nauka",
-        "safety_score": 60,
-        "rating": "B (Stable)",
-        "median_margin": 0.0,
-        "median_roe": -0.214515,
-        "median_pe": 17.4604745,
-        "median_dividend_yield": 2.675,
-        "companies_count": 17,
-        "total_cap_pln": 11287823876
+        "section_name": "Nauka i Biznes",
+        "safety_score": 93,
+        "rating": "A (Strong)",
+        "median_margin": 0.14980499,
+        "median_roe": 0.4348,
+        "median_pe": 16.1747,
+        "median_dividend_yield": 2.85,
+        "companies_count": 4,
+        "total_cap_pln": 4089806218
     },
     {
         "section_code": "Q",
         "section_name": "Opieka Zdrowotna",
-        "safety_score": 76,
+        "safety_score": 60,
         "rating": "B (Stable)",
-        "median_margin": 0.012105000000000001,
-        "median_roe": 0.11675999,
+        "median_margin": 0.0,
+        "median_roe": -0.0069500000000000004,
         "median_pe": 17.1723425,
-        "median_dividend_yield": 2.64,
-        "companies_count": 10,
-        "total_cap_pln": 41254991333
+        "median_dividend_yield": 2.83,
+        "companies_count": 29,
+        "total_cap_pln": 52932642361
+    },
+    {
+        "section_code": "R",
+        "section_name": "Rozrywka i Sport",
+        "safety_score": 78,
+        "rating": "B (Stable)",
+        "median_margin": 0.063260004,
+        "median_roe": 0.32382,
+        "median_pe": 13.6172228,
+        "median_dividend_yield": 6.34,
+        "companies_count": 3,
+        "total_cap_pln": 13039093304
     }
 ]

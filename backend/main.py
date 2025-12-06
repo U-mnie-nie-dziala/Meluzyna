@@ -17,7 +17,7 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 Base = declarative_base()
 
 class ReportDB(Base):
-    __tablename__ = "report"  # Nazwa tabeli w Postgres (zazwyczaj małe litery)
+    __tablename__ = "report"
 
     id = Column(Integer, primary_key=True, index=True)
     date = Column(Date, nullable=False)
@@ -36,7 +36,6 @@ class SectionDB(Base):
     safety_score = Column(Integer)
     rating = Column(String(20))
 
-    # Używamy Numeric dla decimal(20,18)
     median_margin = Column(Numeric(20, 18))
     median_roe = Column(Numeric(20, 18))
     median_pe = Column(Numeric(20, 18))
@@ -46,6 +45,11 @@ class SectionDB(Base):
     total_cap_pln = Column(Integer)  # BigInt mapuje się na Integer/Long
 
     report = relationship("ReportDB", back_populates="sections")
+
+class PKD(Base):
+    __tablename__ = "pkd"
+    pkd = Column(String(1), primary_key=True, index=True)
+    nazwa = Column(String(255))
 
 class SectionSchema(BaseModel):
     section_code: str
@@ -57,12 +61,11 @@ class SectionSchema(BaseModel):
     companies_count: int
 
     class Config:
-        from_attributes = True # Wymagane dla ORM
+        from_attributes = True
 
 class ReportSchema(BaseModel):
     id: int
     date: date
-    # Opcjonalnie dołączamy sekcje
     sections: List[SectionSchema] = []
 
     class Config:
@@ -73,6 +76,13 @@ class SimpleScoreSchema(BaseModel):
     section_name: str
     safety_score: int
     rating: str
+
+    class Config:
+        from_attributes = True
+
+class PkdSchema(BaseModel):
+    pkd: str
+    nazwa: str
 
     class Config:
         from_attributes = True
@@ -187,3 +197,19 @@ async def get_single_sector_score(section_code: str, db: AsyncSession = Depends(
 """
 ---------------------------------------------------------------------------
 """
+
+#lista kategorii, opis i kod
+@app.get("/categories", response_model=List[PkdSchema])
+async def get_all_categories(db: AsyncSession = Depends(get_db)):
+
+    stmt = (
+        select(PKD).order_by(PKD.pkd)
+    )
+
+    result = await db.execute(stmt)
+    categories = result.scalars().all()
+
+    if not categories:
+        raise HTTPException(status_code=404, detail=f"Nie znaleziono kategorii")
+
+    return categories
