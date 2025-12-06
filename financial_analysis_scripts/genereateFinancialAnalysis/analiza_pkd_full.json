@@ -1,0 +1,167 @@
+{
+    "D": {
+        "nazwa_sekcji": "Wytwarzanie i zaopatrywanie w energię",
+        "statystyki": {
+            "liczba_firm": 21,
+            "kapitalizacja_suma": 210633940698.0,
+            "przychody_suma": 9443342981920.0
+        },
+        "wskazniki_mediana": {
+            "pe": 6.54487185,
+            "pb": 0.5038338,
+            "roe": 0.0023,
+            "marza_netto": 0.0,
+            "dywidenda_yield": 3.66
+        }
+    },
+    "C": {
+        "nazwa_sekcji": "Przetwórstwo przemysłowe",
+        "statystyki": {
+            "liczba_firm": 81,
+            "kapitalizacja_suma": 162543257230.0,
+            "przychody_suma": 384281022218.0
+        },
+        "wskazniki_mediana": {
+            "pe": 9.895833,
+            "pb": 0.9498038,
+            "roe": 0.06003,
+            "marza_netto": 0.0392,
+            "dywidenda_yield": 4.14
+        }
+    },
+    "K": {
+        "nazwa_sekcji": "Działalność finansowa i ubezpieczeniowa",
+        "statystyki": {
+            "liczba_firm": 46,
+            "kapitalizacja_suma": 1445096400851.0,
+            "przychody_suma": 257587263694.0
+        },
+        "wskazniki_mediana": {
+            "pe": 9.586895,
+            "pb": 1.44014475,
+            "roe": 0.09844,
+            "marza_netto": 0.171854995,
+            "dywidenda_yield": 6.845000000000001
+        }
+    },
+    "G": {
+        "nazwa_sekcji": "Handel hurtowy i detaliczny",
+        "statystyki": {
+            "liczba_firm": 61,
+            "kapitalizacja_suma": 192854522444.0,
+            "przychody_suma": 212405074820.0
+        },
+        "wskazniki_mediana": {
+            "pe": 12.5,
+            "pb": 1.2827954,
+            "roe": 0.097805,
+            "marza_netto": 0.030580001,
+            "dywidenda_yield": 4.22
+        }
+    },
+    "J": {
+        "nazwa_sekcji": "Informacja i komunikacja",
+        "statystyki": {
+            "liczba_firm": 90,
+            "kapitalizacja_suma": 96286733711.0,
+            "przychody_suma": 90215586832.0
+        },
+        "wskazniki_mediana": {
+            "pe": 13.08839,
+            "pb": 1.8040481,
+            "roe": 0.10722500500000001,
+            "marza_netto": 0.042600001,
+            "dywidenda_yield": 3.965
+        }
+    },
+    "F": {
+        "nazwa_sekcji": "Budownictwo",
+        "statystyki": {
+            "liczba_firm": 28,
+            "kapitalizacja_suma": 27676598058.0,
+            "przychody_suma": 36591333227.0
+        },
+        "wskazniki_mediana": {
+            "pe": 15.4688655,
+            "pb": 1.3846795,
+            "roe": 0.074099995,
+            "marza_netto": 0.030725,
+            "dywidenda_yield": 4.18
+        }
+    },
+    "B": {
+        "nazwa_sekcji": "Górnictwo i wydobywanie",
+        "statystyki": {
+            "liczba_firm": 2,
+            "kapitalizacja_suma": 47618612480.0,
+            "przychody_suma": 35044272094.0
+        },
+        "wskazniki_mediana": {
+            "pe": 18.316446,
+            "pb": 21.12730655,
+            "roe": -0.16275499799999998,
+            "marza_netto": 0.036624998,
+            "dywidenda_yield": 2.31
+        }
+    },
+    "Q": {
+        "nazwa_sekcji": "Opieka zdrowotna",
+        "statystyki": {
+            "liczba_firm": 10,
+            "kapitalizacja_suma": 41254991333.0,
+            "przychody_suma": 19560445488.0
+        },
+        "wskazniki_mediana": {
+            "pe": 17.1723425,
+            "pb": 4.28197195,
+            "roe": 0.11675999,
+            "marza_netto": 0.012105000000000001,
+            "dywidenda_yield": 2.64
+        }
+    },
+    "L": {
+        "nazwa_sekcji": "Obsługa rynku nieruchomości",
+        "statystyki": {
+            "liczba_firm": 28,
+            "kapitalizacja_suma": 33572349830.0,
+            "przychody_suma": 12993937433.0
+        },
+        "wskazniki_mediana": {
+            "pe": 12.326769500000001,
+            "pb": 0.6841146650000001,
+            "roe": 0.047494998499999996,
+            "marza_netto": 0.063134999,
+            "dywidenda_yield": 6.29
+        }
+    },
+    "M": {
+        "nazwa_sekcji": "Działalność profesjonalna, naukowa i techniczna",
+        "statystyki": {
+            "liczba_firm": 17,
+            "kapitalizacja_suma": 11287823876.0,
+            "przychody_suma": 3771640276.0
+        },
+        "wskazniki_mediana": {
+            "pe": 17.4604745,
+            "pb": 2.7102315,
+            "roe": -0.214515,
+            "marza_netto": 0.0,
+            "dywidenda_yield": 2.675
+        }
+    },
+    "Inne": {
+        "nazwa_sekcji": "Pozostała działalność",
+        "statystyki": {
+            "liczba_firm": 3,
+            "kapitalizacja_suma": 5653790832.0,
+            "przychody_suma": 189468000.0
+        },
+        "wskazniki_mediana": {
+            "pe": 15.915682,
+            "pb": 2.4703934,
+            "roe": -0.368465015,
+            "marza_netto": -0.27392500000000003,
+            "dywidenda_yield": null
+        }
+    }
+}
