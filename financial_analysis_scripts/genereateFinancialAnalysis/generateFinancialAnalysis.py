@@ -33,30 +33,129 @@ OUTPUT_DIR = "reports_financial"
 
 if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
 
-YFINANCE_INDUSTRY_TO_PKD = {
-    "Engineering & Construction": "F", "Residential Construction": "F", "Building Materials": "F",
-    "Apparel Retail": "G", "Specialty Retail": "G", "Grocery Stores": "G", "Internet Retail": "G",
-    "Auto Parts": "G", "Auto & Truck Dealerships": "G", "Luxury Goods": "G",
-    "Software - Infrastructure": "J", "Software - Application": "J", "Electronic Gaming & Multimedia": "J",
-    "Entertainment": "J", "Telecom Services": "J", "Internet Content & Information": "J",
-    "Banks - Regional": "K", "Insurance - Diversified": "K", "Insurance - Life": "K", "Capital Markets": "K",
-    "Other Industrial Metals & Mining": "B", "Copper": "B", "Coal": "B", "Oil & Gas E&P": "B",
-    "Chemicals": "C", "Specialty Chemicals": "C", "Aerospace & Defense": "C", "Packaging & Containers": "C",
-    "Utilities - Regulated Electric": "D", "Utilities - Renewable": "D", "Real Estate - Development": "L",
-    "Medical Instruments & Supplies": "C", "Diagnostics & Research": "M", "Biotechnology": "M", "Hospitals": "Q"
-}
-YFINANCE_SECTOR_FALLBACK = {
-    "Financial Services": "K", "Technology": "J", "Communication Services": "J", "Energy": "D",
-    "Consumer Cyclical": "G", "Consumer Defensive": "G", "Industrials": "C", "Basic Materials": "C",
-    "Real Estate": "L", "Healthcare": "Q", "Utilities": "D"
-}
 PKD_DESCRIPTIONS = {
-    "B": "Górnictwo", "C": "Przetwórstwo", "D": "Energetyka", "F": "Budownictwo",
-    "G": "Handel", "J": "IT i Media", "K": "Finanse", "L": "Nieruchomości",
-    "M": "Nauka", "Q": "Opieka Zdrowotna", "": "Pozostałe"
+    "A": "Rolnictwo",
+    "B": "Górnictwo",
+    "C": "Przemysł",
+    "D": "Energetyka",
+    "E": "Woda i Odpady",
+    "F": "Budownictwo",
+    "G": "Handel",
+    "H": "Transport",
+    "I": "Gastronomia i Hotele",
+    "J": "IT i Media",
+    "K": "Finanse",
+    "L": "Nieruchomości",
+    "M": "Nauka i Biznes",
+    "Q": "Opieka Zdrowotna",
+    "R": "Rozrywka i Sport",
+    "OT": "Pozostałe"
 }
 
+# 2. MAPOWANIE BRANŻ (INDUSTRY) -> PKD
+YFINANCE_INDUSTRY_TO_PKD = {
+    # --- F: BUDOWNICTWO ---
+    "Engineering & Construction": "F",
+    "Residential Construction": "F",
+    "Building Materials": "F",
 
+    # --- G: HANDEL ---
+    "Apparel Retail": "G",
+    "Specialty Retail": "G",
+    "Grocery Stores": "G",
+    "Internet Retail": "G",
+    "Auto Parts": "G",
+    "Auto & Truck Dealerships": "G",
+    "Luxury Goods": "G",
+
+    # --- H: TRANSPORT  ---
+    "Railroads": "H",
+    "Airlines": "H",
+    "Airports & Air Services": "H",
+    "Marine Shipping": "H",
+    "Integrated Freight & Logistics": "H",
+    "Trucking": "H",
+
+    # --- I: GASTRONOMIA I HOTELE ---
+    "Restaurants": "I",
+    "Lodging": "I",
+    "Food Services": "I",
+    "Resorts & Casinos": "I",
+
+    # --- J: IT I MEDIA ---
+    "Software - Infrastructure": "J",
+    "Software - Application": "J",
+    "Electronic Gaming & Multimedia": "J",
+    "Entertainment": "J",
+    "Telecom Services": "J",
+    "Internet Content & Information": "J",
+    "Broadcasting": "J",
+
+    # --- K: FINANSE ---
+    "Banks - Regional": "K",
+    "Insurance - Diversified": "K",
+    "Insurance - Life": "K",
+    "Capital Markets": "K",
+    "Asset Management": "K",
+    "Credit Services": "K",
+
+    # --- L: NIERUCHOMOŚCI ---
+    "Real Estate - Development": "L",
+    "Real Estate Services": "L",
+    "REIT - Diversified": "L",
+    "REIT - Retail": "L",
+
+    # --- M: NAUKA I BIZNES ---
+    "Consulting Services": "M",
+    "Staffing & Employment Services": "M",
+    "Research & Consulting": "M",
+
+    # --- B: GÓRNICTWO ---
+    "Other Industrial Metals & Mining": "B",
+    "Copper": "B",
+    "Coal": "B",
+    "Oil & Gas E&P": "B",
+    "Gold": "B",
+
+    # --- C: PRZEMYSŁ ---
+    "Oil & Gas Integrated": "C",
+    "Chemicals": "C",
+    "Specialty Chemicals": "C",
+    "Aerospace & Defense": "C",
+    "Packaging & Containers": "C",
+    "Food Distribution": "C",
+    "Farm Products": "C",
+    "Paper & Paper Products": "C",
+
+    # --- D: ENERGETYKA ---
+    "Utilities - Regulated Electric": "D",
+    "Utilities - Renewable": "D",
+    "Utilities - Independent Power Producers": "D",
+
+    # --- Q: ZDROWIE ---
+    "Medical Instruments & Supplies": "Q",
+    "Medical Care Facilities": "Q",
+    "Health Information Services": "Q",
+
+    # --- R: ROZRYWKA (NOWE) ---
+    "Leisure": "R",  #
+    "Travel Services": "R"
+}
+
+# 3. MAPOWANIE SEKTORÓW (FALLBACK)
+YFINANCE_SECTOR_FALLBACK = {
+    "Financial Services": "K",
+    "Technology": "J",
+    "Communication Services": "J",
+    "Energy": "D",
+    "Consumer Cyclical": "G",
+    "Consumer Defensive": "G",
+    "Industrials": "C",
+    "Basic Materials": "C",
+    "Real Estate": "L",
+    "Healthcare": "Q",
+    "Utilities": "D"
+}
 
 def fetch_ticker_from_slug(slug):
     """Pobiera ticker ze strony szczegółów spółki"""
