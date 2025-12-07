@@ -545,48 +545,73 @@ async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
         for r in rows
     ]
 
+@app.get("/komentarz_youtube/{section_code}")
+async def get_youtube_comments_by_sector(section_code: str, db: AsyncSession = Depends(get_db)):
+    code = section_code.upper()
+    tags_sub = select(TagDB.id).where(TagDB.pkd_id == code)
+    
+    stmt = select(YoutubeCommentDB).where(YoutubeCommentDB.tag_id.in_(tags_sub)).order_by(desc(YoutubeCommentDB.timestamp))
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+
+    if not rows:
+        return []
+
+    return [
+        {
+            "id": r.id,
+            "komentarz": r.komentarz,
+            "tag_id": r.tag_id,
+            "timestamp": r.timestamp,
+            "emocje": r.emocje
+        }
+        for r in rows
+    ]
+
 @app.get("/post_wykop")
 async def get_all_wykop_comments(db: AsyncSession = Depends(get_db)):
     """
-    Returns all rows from komentarz_youtube (YoutubeCommentDB)
+    Returns all rows from post_wykop (WykopPostDB)
     """
-    result = await db.execute(select(YoutubeCommentDB))
+    result = await db.execute(select(WykopPostDB))
     rows = result.scalars().all()
 
     if not rows:
-        raise HTTPException(status_code=404, detail="Brak danych w komentarz_youtube")
+        raise HTTPException(status_code=404, detail="Brak danych w post_wykop")
 
     return [
         {
             "id": r.id,
             "tag_id": r.tag_id,
-            "post": r.komentarz,
+            "post": r.post,
             "timestamp": r.timestamp,
             "emocje": r.emocje
         }
         for r in rows
     ]
 
-@app.get("/post_wykop/{sector}")
-async def get_all_wykop_comments(db: AsyncSession = Depends(get_db)):
-    """
-    Returns all rows from komentarz_youtube (YoutubeCommentDB)
-    """
-    result = await db.execute(select(YoutubeCommentDB))
+@app.get("/post_wykop/{section_code}")
+async def get_wykop_comments_by_sector(section_code: str, db: AsyncSession = Depends(get_db)):
+    code = section_code.upper()
+    tags_sub = select(TagDB.id).where(TagDB.pkd_id == code)
+
+    stmt = select(WykopPostDB).where(WykopPostDB.tag_id.in_(tags_sub)).order_by(desc(WykopPostDB.timestamp))
+    result = await db.execute(stmt)
     rows = result.scalars().all()
 
     if not rows:
-        raise HTTPException(status_code=404, detail="Brak danych w komentarz_youtube")
+        return []
 
     return [
         {
             "id": r.id,
             "tag_id": r.tag_id,
-            "post": r.komentarz,
+            "post": r.post,
             "timestamp": r.timestamp,
             "emocje": r.emocje
         }
         for r in rows
     ]
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

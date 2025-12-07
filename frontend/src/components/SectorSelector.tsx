@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Building2, ChevronDown, Check } from 'lucide-react';
 import { Sector } from '../types';
-import { AnalysisData } from './tabs/types';
-import { fetchYoutubeHistogram } from './tabs/fetchYoutubeHistogram';
-import { RiskTab } from './tabs/RiskTab';
+import { API_BASE_URL } from '../config';
 
 interface SectorSelectorProps {
   selectedSector: Sector | '';
@@ -19,7 +17,7 @@ export default function SectorSelector({ selectedSector, onSectorChange }: Secto
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/categories')
+    fetch(`${API_BASE_URL}/categories`)
       .then(res => res.json())
       .then(data => {
         const formattedSectors = data.map((item: { pkd: string; nazwa: string }) => ({

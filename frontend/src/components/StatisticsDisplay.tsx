@@ -1,5 +1,6 @@
 // src/components/StatisticsDisplay.tsx
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../config';
 import {
   TrendingUp,
   TrendingDown,
@@ -7,6 +8,7 @@ import {
   Activity,
   AlertCircle,
   Award,
+  MessageSquare,
 } from 'lucide-react';
 import { AnalysisData, Sector } from '../types';
 import SectorRanking from '../SectorRanking';
@@ -22,7 +24,7 @@ interface StatisticsDisplayProps {
 
 
 
-type Tab = 'overview' | 'performance' | 'media' | 'stock-market' | 'charts';
+type Tab = 'overview' | 'performance' | 'media' | 'charts';
 
 export default function StatisticsDisplay({ data, sector }: StatisticsDisplayProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -32,9 +34,8 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
   const tabs = [
     { id: 'overview' as Tab, label: 'Przegląd', icon: BarChart3 },
     { id: 'performance' as Tab, label: 'Ranking Sektorów', icon: Activity },
-    { id: 'media' as Tab, label: 'Media', icon: AlertCircle },
+    { id: 'media' as Tab, label: 'Media', icon: MessageSquare },
     { id: 'charts' as Tab, label: 'Wykresy', icon: TrendingUp },
-    { id: 'stock-market' as Tab, label: 'Giełda', icon: AlertCircle },
   ];
 
   // ...
@@ -46,7 +47,7 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
 
   { activeTab === 'charts' && <ChartsTab sector={sector} /> }
 
-  { activeTab === 'stock-market' && <StockMarket sector={sector} /> }
+
 
   const sectorName = sector.charAt(0).toUpperCase() + sector.slice(1);
 
@@ -95,11 +96,11 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
         {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */}
         {activeTab === 'performance' && <SectorRanking />}
 
-        {activeTab === 'media' && <><YoutubeHistogramPage sector={sector} /><WykopHistogramPage sector={sector}/></>}
+        {activeTab === 'media' && <><YoutubeHistogramPage sector={sector} /><WykopHistogramPage sector={sector} /></>}
 
         {activeTab === 'charts' && <ChartsTab sector={sector} />}
 
-        {activeTab === 'stock-market' && <StockMarket sector={sector} />}
+
       </div>
     </div>
   );
@@ -115,7 +116,7 @@ function StockMarket({ sector }: { sector: Sector }) {
   useEffect(() => {
     const fetchLatest = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
+        const res = await fetch(`${API_BASE_URL}/markets/scores/${sector}`);
         if (res.ok) {
           const data = await res.json();
           setLatest(data);
@@ -154,7 +155,7 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
     const fetchCeidg = async () => {
       setCeidgScore(null);
       try {
-        const response = await fetch(`${process.env.url}/ceidg/scores/${sector}`);
+        const response = await fetch(`${API_BASE_URL}/ceidg/scores/${sector}`);
         if (response.ok) {
           const result = await response.json();
           // Sprawdzamy czy to obiekt czy liczba
@@ -238,39 +239,6 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
           label="Giełda"
           value={data.stockMarketSentiment}
         />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Wskaźniki Finansowe</h3>
-          <div className="space-y-3">
-            <RatioRow label="Marża Zysku" value={`${data.profitMargin}%`} />
-            <RatioRow label="ROE" value={`${data.roe}%`} />
-            <RatioRow label="Wskaźnik C/Z (P/E)" value={data.peRatio.toFixed(2)} />
-            <RatioRow label="Stopa Dywidendy" value={`${data.dividendYield}%`} />
-          </div>
-        </div>
-
-        <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <Award className="w-4 h-4" />
-            Liderzy Sektora
-          </h3>
-          <div className="space-y-3">
-            {data.topPerformers.map((performer, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-slate-700 font-medium">{performer.name}</span>
-                <span
-                  className={`text-sm font-semibold ${performer.performance > 0 ? 'text-emerald-600' : 'text-red-600'
-                    }`}
-                >
-                  {performer.performance > 0 ? '+' : ''}
-                  {performer.performance}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

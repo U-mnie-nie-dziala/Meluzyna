@@ -1,4 +1,5 @@
 import { Sector, AnalysisData } from '../types';
+import { API_BASE_URL } from '../config';
 
 // Removed hardcoded mock data (sectorData, topPerformersData) to ensure strictly "No Data" is shown when backend fails or lacks data.
 
@@ -16,7 +17,7 @@ export function generateAnalysis(sector: Sector): AnalysisData {
     totalCompanies: 0,
     topPerformers: [],
     riskLevel: 'Medium',
-    outlook: 'N/A',
+    outlook: 'Neutral',
     demographics: -1,         // Sentinel for "No Data"
     growthSpeed: -1,          // Sentinel for "No Data"
     mediaSentiment: -1,       // Sentinel for "No Data"
@@ -29,8 +30,8 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
   try {
     // Dual fetch using soft-handling (return null if failed)
     const [detailsData, scoresData] = await Promise.all([
-      fetch(`http://127.0.0.1:8000/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`http://127.0.0.1:8000/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch(`${API_BASE_URL}/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API_BASE_URL}/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
 
     // If both failed, we really have nothing -> Return explicit "No Data" state

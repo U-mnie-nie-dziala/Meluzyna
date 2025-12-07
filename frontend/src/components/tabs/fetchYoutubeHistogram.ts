@@ -1,10 +1,11 @@
 import { AnalysisData } from "./types";
+import { API_BASE_URL } from "../../config";
 
-export async function fetchYoutubeHistogram(sector): Promise<AnalysisData> {
+export async function fetchYoutubeHistogram(sector: string): Promise<AnalysisData> {
 
   console.log(sector);
 
-  const res = await fetch("http://127.0.0.1:8000/komentarz_youtube");
+  const res = await fetch(`${API_BASE_URL}/komentarz_youtube/${sector}`);
 
   if (!res.ok) {
     throw new Error("Failed to fetch komentarz_youtube");
