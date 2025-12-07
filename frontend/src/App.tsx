@@ -34,8 +34,8 @@ function App() {
               <BarChart3 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Banking Analytics Platform</h1>
-              <p className="text-sm text-slate-600">Comprehensive Sector Analysis & Statistics</p>
+              <h1 className="text-2xl font-bold text-slate-900">Platforma Analityki Bankowej</h1>
+              <p className="text-sm text-slate-600">Kompleksowa analiza i statystyki sektorowe</p>
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@ function App() {
               ) : (
                 <>
                   <TrendingUp className="w-5 h-5" />
-                  Analyze
+                  Analizuj
                 </>
               )}
             </button>

@@ -3,20 +3,22 @@ from psycopg2 import extras
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from datetime import datetime, timedelta
+import csv
+import os
 
 
 API_KEY = 'AIzaSyDyW3KY_HzAfljw2z-BhQ9jAX1IeV9v1nY'
 
-# Konfiguracja Bazy Danych
 DB_HOST = "212.132.76.195"
 DB_PORT = "5433"
 DB_NAME = "hacknation_db"
 DB_USER = "hack"
-DB_PASS = "HackNation!"
+DB_PASS = "HackNation!"  
+
+CSV_FILENAME = 'komentarze_youtube.csv'
 
 
 def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None):
-
     cur = conn.cursor()
 
 
@@ -33,7 +35,6 @@ def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None
     except Exception as e:
         print(f"Błąd podczas pobierania ID tagu: {e}")
         return
-
 
     try:
         if data_koncowa_str:
@@ -54,10 +55,13 @@ def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None
     youtube = build('youtube', 'v3', developerKey=api_key)
 
     comments_data_to_insert = []
+    csv_rows = []
+
+
+    timestamp_pobrania = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
         print(f"[{szukany_hasztag}] Szukam filmu (ID tagu: {tag_db_id})...")
-
 
         search_request = youtube.search().list(
             part="id,snippet",
@@ -83,7 +87,7 @@ def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None
 
         print(f"   -> Znaleziono: {video_title[:50]}...")
 
-        # Krok B: Pobieranie komentarzy
+
         comments_request = youtube.commentThreads().list(
             part="snippet",
             videoId=video_id,
@@ -94,30 +98,33 @@ def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None
 
         items = comments_response.get('items', [])
 
-
         cur.execute("SELECT COALESCE(MAX(id), 0) FROM komentarz_youtube")
         max_id_row = cur.fetchone()
         current_max_id = max_id_row[0] if max_id_row else 0
 
-
         for i, item in enumerate(items):
-
             new_id = current_max_id + 1 + i
 
             text = item['snippet']['topLevelComment']['snippet']['textDisplay']
             clean_text = text.strip()
 
 
-            comments_data_to_insert.append((new_id, clean_text, tag_db_id))
+            comments_data_to_insert.append((new_id, clean_text, tag_db_id, timestamp_pobrania))
 
+
+            csv_rows.append([szukany_hasztag, clean_text, timestamp_pobrania])
 
         if comments_data_to_insert:
 
-            query = "INSERT INTO komentarz_youtube (id, komentarz, tag_id) VALUES %s"
+            query = "INSERT INTO komentarz_youtube (id, komentarz, tag_id, timestamp) VALUES %s"
 
             extras.execute_values(cur, query, comments_data_to_insert)
-
             conn.commit()
+
+            with open(CSV_FILENAME, mode='a', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
+                writer.writerows(csv_rows)
+
             print(f"   -> SUKCES: Wgrano {len(comments_data_to_insert)} komentarzy (ID od {current_max_id + 1}).")
         else:
             print("   -> Pobrano 0 komentarzy.")
@@ -132,7 +139,6 @@ def pobierz_filmy_z_okresu(api_key, conn, szukany_hasztag, data_koncowa_str=None
         print(f"   -> Wystąpił błąd: {e}")
     finally:
         cur.close()
-
 
 
 if __name__ == "__main__":
@@ -152,9 +158,17 @@ if __name__ == "__main__":
         "nieruchomości"
     ]
 
+    try:
+        with open(CSV_FILENAME, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['tag', 'komentarz', 'timestamp'])
+        print(f"Utworzono plik: {CSV_FILENAME}")
+    except IOError as e:
+        print(f"Błąd przy tworzeniu pliku CSV: {e}")
+        exit()
+
     print("Łączenie z bazą danych...")
     try:
-
         connection = psycopg2.connect(
             host=DB_HOST,
             port=DB_PORT,
