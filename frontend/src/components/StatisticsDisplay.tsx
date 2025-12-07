@@ -6,10 +6,9 @@ import {
   Activity,
   AlertCircle,
   Award,
-  Users,
-  Newspaper,
 } from 'lucide-react';
 import { AnalysisData, Sector } from '../types';
+import { PerformanceTab } from './tabs/PerformanceTab';
 
 interface StatisticsDisplayProps {
   data: AnalysisData;
@@ -23,8 +22,8 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
 
   const tabs = [
     { id: 'overview' as Tab, label: 'Przegląd', icon: BarChart3 },
-    { id: 'performance' as Tab, label: 'Performance', icon: Activity },
-    { id: 'risk' as Tab, label: 'Risk Analysis', icon: AlertCircle },
+    { id: 'performance' as Tab, label: 'Ranking Sektorów', icon: Activity },
+    { id: 'media' as Tab, label: 'Media', icon: AlertCircle },
     { id: 'stock-market' as Tab, label: 'Giełda', icon: AlertCircle },
   ];
 
@@ -212,54 +211,7 @@ function OverviewTab({ data }: { data: AnalysisData }) {
   );
 }
 
-function PerformanceTab({ data }: { data: AnalysisData }) {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard
-          label="Revenue Growth"
-          value={`${data.growth}%`}
-          description="Year-over-year revenue growth rate"
-          trend={data.growth > 0 ? 'positive' : 'negative'}
-        />
-        <MetricCard
-          label="Profit Margin"
-          value={`${data.profitMargin}%`}
-          description="Net profit as percentage of revenue"
-          trend={data.profitMargin > 15 ? 'positive' : 'neutral'}
-        />
-        <MetricCard
-          label="Return on Equity"
-          value={`${data.roe}%`}
-          description="Profitability relative to shareholders' equity"
-          trend={data.roe > 12 ? 'positive' : 'neutral'}
-        />
-      </div>
 
-      <div className="bg-gradient-to-br from-blue-50 to-slate-50 rounded-lg p-6 border border-blue-200">
-        <div className="flex items-start gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-slate-900 mb-2">Sector Outlook</h3>
-            <p className="text-sm text-slate-700 leading-relaxed">
-              The sector demonstrates{' '}
-              <span className="font-semibold">
-                {data.outlook.toLowerCase()}
-              </span>{' '}
-              outlook with{' '}
-              <span className="font-semibold">{data.growth > 0 ? 'positive' : 'negative'}</span>{' '}
-              growth trajectory. Current market conditions indicate{' '}
-              <span className="font-semibold">{data.riskLevel.toLowerCase()}</span> risk levels
-              with strong fundamentals across key metrics.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RiskTab({ data }: { data: AnalysisData }) {
   const getRiskColor = (level: string) => {
@@ -408,61 +360,4 @@ function RatioRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  description,
-  trend,
-}: {
-  label: string;
-  value: string;
-  description: string;
-  trend: 'positive' | 'neutral' | 'negative';
-}) {
-  const trendColors = {
-    positive: 'border-emerald-200 bg-emerald-50',
-    neutral: 'border-slate-200 bg-slate-50',
-    negative: 'border-red-200 bg-red-50',
-  };
 
-  return (
-    <div className={`border rounded-lg p-5 ${trendColors[trend]}`}>
-      <p className="text-sm font-semibold text-slate-700 mb-2">{label}</p>
-      <p className="text-3xl font-bold text-slate-900 mb-2">{value}</p>
-      <p className="text-xs text-slate-600 leading-relaxed">{description}</p>
-    </div>
-  );
-}
-
-function RiskMetricCard({
-  label,
-  value,
-  optimal,
-  status,
-}: {
-  label: string;
-  value: string;
-  optimal: string;
-  status: 'good' | 'moderate' | 'high';
-}) {
-  const statusConfig = {
-    good: { color: 'text-emerald-600', bg: 'bg-emerald-100', label: 'Optimal' },
-    moderate: { color: 'text-amber-600', bg: 'bg-amber-100', label: 'Moderate' },
-    high: { color: 'text-red-600', bg: 'bg-red-100', label: 'Elevated' },
-  };
-
-  const config = statusConfig[status];
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-lg p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-slate-700">{label}</span>
-        <span className={`text-xs font-semibold px-2 py-1 rounded ${config.bg} ${config.color}`}>
-          {config.label}
-        </span>
-      </div>
-      <p className="text-2xl font-bold text-slate-900 mb-1">{value}</p>
-      <p className="text-xs text-slate-600">Optimal range: {optimal}</p>
-    </div>
-  );
-}
