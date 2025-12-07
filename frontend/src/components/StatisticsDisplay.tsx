@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  PieChart,
   BarChart3,
   Activity,
   AlertCircle,
   Award,
+  Users,
+  Newspaper,
 } from 'lucide-react';
 import { AnalysisData, Sector } from '../types';
 
@@ -50,11 +50,10 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 px-6 py-4 font-semibold text-sm transition-all relative
-                          ${
-                            activeTab === tab.id
-                              ? 'text-blue-600 bg-white'
-                              : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
-                          }`}
+                          ${activeTab === tab.id
+                    ? 'text-blue-600 bg-white'
+                    : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
+                  }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   <Icon className="w-4 h-4" />
@@ -73,33 +72,35 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
         {activeTab === 'overview' && <OverviewTab data={data} />}
         {activeTab === 'performance' && <PerformanceTab data={data} />}
         {activeTab === 'risk' && <RiskTab data={data} />}
-        {activeTab === 'stock-market' && <StockMarket />}
+        {activeTab === 'stock-market' && <StockMarket sector={sector} />}
       </div>
     </div>
   );
 }
 
 
-function StockMarket() {
+function StockMarket({ sector }: { sector: Sector }) {
   const [latest, setLatest] = useState(null);
 
   useEffect(() => {
     const fetchLatest = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/markets/reports/latest");
+        const res = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
         const data = await res.json();
         setLatest(data);
       } catch (error) {
-        console.error("Error fetching latest report:", error);
+        console.error("Error fetching sector score:", error);
       }
     };
 
-    fetchLatest();
-  }, []); 
+    if (sector) {
+      fetchLatest();
+    }
+  }, [sector]);
 
   return (
     <div>
-      <h1>Latest Market Report</h1>
+      <h1>Sector Market Data ({sector})</h1>
       {latest ? (
         <pre>{JSON.stringify(latest, null, 2)}</pre>
       ) : (
@@ -114,34 +115,25 @@ function OverviewTab({ data }: { data: AnalysisData }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={DollarSign}
-          label="Market Cap"
-          value={data.marketCap}
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-600"
+        <ScoreCard
+          label="Demografia firm"
+          value={data.demographics}
+          icon={Users}
         />
-        <StatCard
+        <ScoreCard
+          label="Tempo wzrostu"
+          value={data.growthSpeed}
           icon={TrendingUp}
-          label="Total Revenue"
-          value={data.revenue}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
         />
-        <StatCard
-          icon={Activity}
-          label="Growth Rate"
-          value={`${data.growth > 0 ? '+' : ''}${data.growth}%`}
-          trend={data.growth > 0 ? 'up' : 'down'}
-          iconBg="bg-amber-100"
-          iconColor="text-amber-600"
+        <ScoreCard
+          label="Media"
+          value={data.mediaSentiment}
+          icon={Newspaper}
         />
-        <StatCard
-          icon={PieChart}
-          label="Companies"
-          value={data.totalCompanies.toString()}
-          iconBg="bg-violet-100"
-          iconColor="text-violet-600"
+        <ScoreCard
+          label="Giełda"
+          value={data.stockMarketSentiment}
+          icon={BarChart3}
         />
       </div>
 
@@ -166,9 +158,8 @@ function OverviewTab({ data }: { data: AnalysisData }) {
               <div key={index} className="flex items-center justify-between">
                 <span className="text-sm text-slate-700 font-medium">{performer.name}</span>
                 <span
-                  className={`text-sm font-semibold ${
-                    performer.performance > 0 ? 'text-emerald-600' : 'text-red-600'
-                  }`}
+                  className={`text-sm font-semibold ${performer.performance > 0 ? 'text-emerald-600' : 'text-red-600'
+                    }`}
                 >
                   {performer.performance > 0 ? '+' : ''}
                   {performer.performance}%
@@ -272,8 +263,8 @@ function RiskTab({ data }: { data: AnalysisData }) {
             data.peRatio >= 15 && data.peRatio <= 25
               ? 'good'
               : data.peRatio < 15 || data.peRatio <= 35
-              ? 'moderate'
-              : 'high'
+                ? 'moderate'
+                : 'high'
           }
         />
       </div>
@@ -294,41 +285,69 @@ function RiskTab({ data }: { data: AnalysisData }) {
   );
 }
 
-function StatCard({
-  icon: Icon,
+function ScoreCard({
   label,
   value,
-  trend,
-  iconBg,
-  iconColor,
+  icon: Icon,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: string;
-  trend?: 'up' | 'down';
-  iconBg: string;
-  iconColor: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
 }) {
+  // Color scale logic: Red (0) -> Yellow (50) -> Green (100)
+  const getColorClass = (val: number) => {
+    if (val >= 60) return 'text-emerald-500'; // High/Good
+    if (val >= 40) return 'text-yellow-500';  // Mid/Neutral
+    return 'text-red-500';                    // Low/Bad
+  };
+
+  const getBgClass = (val: number) => {
+    if (val >= 60) return 'bg-emerald-50 border-emerald-100';
+    if (val >= 40) return 'bg-yellow-50 border-yellow-100';
+    return 'bg-red-50 border-red-100';
+  };
+
+  // Icon logic: Zigzag arrows
+  const getTrendIcon = (val: number) => {
+    if (val >= 60) return <TrendingUp className="w-6 h-6" />;
+    if (val >= 40) return <Activity className="w-6 h-6" />; // Horizontal-ish zigzag
+    return <TrendingDown className="w-6 h-6" />;
+  };
+
+  const colorClass = getColorClass(value);
+  const bgClass = getBgClass(value);
+
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`${iconBg} p-2 rounded-lg`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+    <div className={`border rounded-lg p-5 hover:shadow-md transition-all ${bgClass}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className={`p-2 rounded-lg bg-white/60 ${colorClass}`}>
+          <Icon className="w-5 h-5" />
         </div>
-        {trend && (
-          <div className={trend === 'up' ? 'text-emerald-600' : 'text-red-600'}>
-            {trend === 'up' ? (
-              <TrendingUp className="w-4 h-4" />
-            ) : (
-              <TrendingDown className="w-4 h-4" />
-            )}
-          </div>
-        )}
+        <div className={colorClass}>
+          {getTrendIcon(value)}
+        </div>
       </div>
-      <p className="text-sm text-slate-600 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      <p className="text-sm font-medium text-slate-600 mb-1">{label}</p>
+      <div className="flex items-end gap-2">
+        <p className={`text-2xl font-bold ${colorClass}`}>{value}/100</p>
+      </div>
+
+      {/* Progress Bar Visual */}
+      <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${valToTailwind(value)}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
     </div>
   );
+}
+
+// Helper for progress bar color
+function valToTailwind(val: number) {
+  if (val >= 60) return 'bg-emerald-500';
+  if (val >= 40) return 'bg-yellow-500';
+  return 'bg-red-500';
 }
 
 function RatioRow({ label, value }: { label: string; value: string }) {
