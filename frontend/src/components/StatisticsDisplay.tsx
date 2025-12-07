@@ -11,11 +11,16 @@ import {
 import { AnalysisData, Sector } from '../types';
 import SectorRanking from '../SectorRanking';
 import ChartsTab from './ChartsTab';
+import { RiskTab } from './tabs/RiskTab';
+import { exampleRiskData } from './exampleHistogramData';
+import YoutubeHistogramPage from './tabs/YoutubeHistogramPage';
 
 interface StatisticsDisplayProps {
   data: AnalysisData;
   sector: Sector;
 }
+
+
 
 type Tab = 'overview' | 'performance' | 'media' | 'stock-market' | 'charts';
 
@@ -90,7 +95,7 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
         {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */}
         {activeTab === 'performance' && <SectorRanking />}
 
-        {activeTab === 'media' && <RiskTab data={data} />}
+        {activeTab === 'media' && <YoutubeHistogramPage />}
 
         {activeTab === 'charts' && <ChartsTab sector={sector} />}
 
@@ -271,68 +276,7 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
   );
 }
 
-function RiskTab({ data }: { data: AnalysisData }) {
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'Low':
-        return 'text-emerald-600 bg-emerald-100';
-      case 'Medium':
-        return 'text-amber-600 bg-amber-100';
-      case 'High':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-slate-600 bg-slate-100';
-    }
-  };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-200">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-700 mb-1">Poziom Ryzyka</h3>
-          <p className="text-2xl font-bold text-slate-900">{data.riskLevel}</p>
-        </div>
-        <div className={`px-4 py-2 rounded-lg font-semibold ${getRiskColor(data.riskLevel)}`}>
-          {data.riskLevel} Risk
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <RiskMetricCard
-          label="Wskaźnik Zadłużenia"
-          value={data.debtToEquity.toFixed(2)}
-          optimal="< 2.0"
-          status={data.debtToEquity < 2 ? 'good' : data.debtToEquity < 3 ? 'moderate' : 'high'}
-        />
-        <RiskMetricCard
-          label="Wskaźnik C/Z"
-          value={data.peRatio.toFixed(2)}
-          optimal="15-25"
-          status={
-            data.peRatio >= 15 && data.peRatio <= 25
-              ? 'good'
-              : data.peRatio < 15 || data.peRatio <= 35
-                ? 'moderate'
-                : 'high'
-          }
-        />
-      </div>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
-        <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-semibold text-amber-900 mb-1">Uwagi dot. ryzyka</h4>
-            <p className="text-sm text-amber-800 leading-relaxed">
-              Monitoruj poziom zadłużenia i wskaźniki wyceny. Zalecana jest dywersyfikacja
-              portfela w ramach sektora, aby ograniczyć ryzyko związane z pojedynczymi spółkami.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RiskMetricCard({ label, value, optimal, status }: { label: string, value: string, optimal: string, status: 'good' | 'moderate' | 'high' }) {
   const getStatusColor = () => {

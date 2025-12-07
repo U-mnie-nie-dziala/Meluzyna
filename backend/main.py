@@ -523,5 +523,27 @@ async def get_history_charts(section_code: str, days: int = 90, db: AsyncSession
 
     return result
 
+@app.get("/komentarz_youtube")
+async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
+    """
+    Returns all rows from komentarz_youtube (YoutubeCommentDB)
+    """
+    result = await db.execute(select(YoutubeCommentDB))
+    rows = result.scalars().all()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Brak danych w komentarz_youtube")
+
+    return [
+        {
+            "id": r.id,
+            "komentarz": r.komentarz,
+            "tag_id": r.tag_id,
+            "timestamp": r.timestamp,
+            "emocje": r.emocje
+        }
+        for r in rows
+    ]
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8001)
