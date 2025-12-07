@@ -1,4 +1,4 @@
-Głównym celem projektu jest **Badanie Sentymentu Użytkowników (Sentiment Analysis). Nie interesują nas suche statystyki wyświetleń, ale ludzkie emocje i reakcje ukryte w tekście.
+Głównym celem projektu jest Badanie Sentymentu Użytkowników (Sentiment Analysis). Nie interesują nas suche statystyki wyświetleń, ale ludzkie emocje i reakcje ukryte w tekście.
 
 Chcemy odpowiedzieć na pytania:
 - Jaki jest odbiór społeczny kluczowych inwestycji (np. CPK, Elektrownie jądrowe)?
