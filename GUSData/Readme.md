@@ -1,55 +1,71 @@
-# 📈 GUS Financial Trend Analyzer (PKD Scorer)
+# 📈 Indeks Branż – Model Oceny Koniunktury Gospodarczej
 
-**Narzędzie analityczne w Pythonie, automatyzujące ocenę kondycji finansowej sektorów gospodarki w Polsce.**
+## 📖 O projekcie
 
-System pobiera dane z Głównego Urzędu Statystycznego (BDL), przetwarza je i generuje **Score Inwestycyjny (0-100)** dla każdej sekcji PKD. Wyniki są zapisywane w bazie PostgreSQL i służą do identyfikacji trendów makroekonomicznych oraz wspierania decyzji inwestycyjnych.
+Projekt powstał w odpowiedzi na wyzwanie opracowania **„Indeksu Branż”** – narzędzia analitycznego prezentującego aktualną sytuację oraz perspektywy rozwoju sektorów polskiej gospodarki.
 
----
-
-## 📋 Spis treści
-1. [Cel Biznesowy](#-cel-biznesowy)
-2. [Metodologia Wskaźnika](#-metodologia-wskaźnika-algorytm)
-3. [Instalacja i Konfiguracja](#-instalacja-i-konfiguracja)
-4. [Uruchomienie](#-uruchomienie)
-5. [Raport Analityczny: Logika Biznesowa](#-raport-analityczny-uzasadnienie-modelu)
+Rozwiązanie ma na celu wsparcie procesów decyzyjnych największego polskiego banku w zakresie strategii finansowania przedsiębiorstw. Model identyfikuje branże o zdrowych fundamentach oraz te narażone na podwyższone ryzyko, umożliwiając budowę bezpiecznego portfela kredytowego.
 
 ---
 
-## 🎯 Cel Biznesowy
-Głównym zadaniem skryptu jest identyfikacja najszybciej rozwijających się branż w Polsce przy jednoczesnym odfiltrowaniu szumu informacyjnego (np. anomalii wywołanych pandemią lub jednorazowymi zdarzeniami księgowymi).
+## 🧠 Metodologia i Uzasadnienie (Kluczowe Założenia)
 
-**Zastosowanie danych:**
-* **Wskazywanie trendów makroekonomicznych:** Szybka ocena kondycji polskiej gospodarki.
-* **Wspieranie decyzji inwestycyjnych:** Selekcja sektorów z potencjałem wzrostu.
-* **Analiza ryzyka:** Identyfikacja sektorów kurczących się.
+Zgodnie z wymogami konkursowymi, poniżej przedstawiono szczegółowe uzasadnienie przyjętego podejścia badawczego.
 
----
+### 1. Definicja Branży i Klasyfikacja
+Do analizy przyjęto klasyfikację opartą na kodach **PKD (Polska Klasyfikacja Działalności)** / NACE.
 
-## 📊 Metodologia Wskaźnika (Algorytm)
-Zastosowano zaawansowany model oceny, aby przekształcić surowe dane finansowe w czytelny ranking.
+* **Uzasadnienie wyboru:** PKD jest obligatoryjnym standardem dla każdego podmiotu gospodarczego w Polsce. Użycie tego standardu zapewnia kompletność danych oraz spójność z raportowaniem europejskim.
+* **Obsługa zmian klasyfikacji (2007 vs 2025):** Ze względu na zmianę klasyfikacji w 2025 roku, model uwzględnia mapowanie danych historycznych (dostępnych w układzie 2007) na nowe standardy, co pozwala zachować ciągłość analizy trendów.
 
-**Dane Źródłowe:** Przychody z całokształtu działalności (szereg czasowy: ostatnie 5 lat).
+### 2. Poziom Agregacji Danych
+Analizę przeprowadzono na poziomie **Działu** (np. 46 – handel hurtowy) lub **Grupy** (np. 46.1).
 
-1.  **Normalizacja:** Zamiana wartości `0` na `NaN` (brak danych), aby uniknąć fałszywych spadków o 100%.
-2.  **Dynamika R/R:** Obliczenie procentowej zmiany rok do roku dla każdego okresu.
-3.  **Mediana (Odporność na Błędy):** Wyciągnięcie mediany wzrostów, a nie średniej. Dzięki temu jeden rok kryzysowy (np. COVID) lub jeden rok anomalnego wzrostu nie zafałszowuje oceny stabilności branży.
-4.  **Skalowanie do Benchmarku (Score 0-100):**
-    * Przyjęto **Benchmark Wzrostu = 25% rocznie**.
-    * Wzrost ≥ 25% = **100 pkt**.
-    * Wzrost 12.5% = **50 pkt**.
-    * Wzrost ujemny/zerowy = niskie punkty.
-    * *Wynik jest przycinany (capped) do 100, aby zachować czytelność wykresów.*
+* **Uzasadnienie:** Przyjęcie tego poziomu stanowi optymalny kompromis między dostępnością danych a precyzją wnioskowania. Wyższy poziom agregacji zapewnia większą próbę statystyczną, minimalizując błędy wynikające z jednostkowych zdarzeń w małych firmach.
+
+### 3. Horyzont Czasowy
+Model ocenia nie tylko stan obecny, ale prognozuje perspektywy w horyzoncie **12-36 miesięcy**.
+
+* **Uzasadnienie:** Taki okres jest kluczowy dla strategii kredytowych (krótko- i średnioterminowych), pozwalając bankowi reagować na nadchodzące zmiany cyklu koniunkturalnego.
 
 ---
 
-## ⚙️ Instalacja i Konfiguracja
+## 📊 Składowe Indeksu (Dobór Wskaźników)
 
-### 1. Wymagania
-* Python 3.8+
-* PostgreSQL
+Ocena kondycji branży opiera się na wielowymiarowym modelu scoringowym. Wybrano wskaźniki, które najlepiej obrazują zarówno stabilność, jak i potencjał wzrostu.
 
-### 2. Instalacja bibliotek
-Zaleca się użycie wirtualnego środowiska (`venv`).
+### A. Fundamenty Finansowe (Ocena Historyczna)
+Wykorzystano twarde dane finansowe przedsiębiorstw:
 
-```bash
-pip install pandas sqlalchemy psycopg2-binary requests python-dotenv numpy
+1.  **Dynamika Rozwoju:** Zmiana przychodów i aktywów r/r. Pozwala zidentyfikować sektory w fazie ekspansji.
+2.  **Rentowność:** Marża zysku (zysk/przychody). Kluczowa miara odporności branży na wzrost kosztów.
+3.  **Ryzyko i Zadłużenie:** Poziom długu oraz jego dynamika. Wskazuje na potencjalne problemy z płynnością.
+4.  **Szkodowość:** Procent upadłości w danym sektorze. Bezpośredni sygnał ryzyka kredytowego.
+
+### B. Dane Alternatywne (Perspektywy)
+W celu zwiększenia wartości predykcyjnej modelu, analizę uzupełniono o zmienne niefinansowe:
+
+* **Sentyment rynkowy:** Analiza trendów w mediach i internecie (nastroje konsumenckie).
+* **Uzasadnienie:** Dane finansowe są danymi opóźnionymi (lagging indicators). Dane alternatywne pełnią funkcję wyprzedzającą (leading indicators), sygnalizując zmiany popytu zanim pojawią się w raportach kwartalnych.
+
+---
+
+## 💻 Aspekty Techniczne
+
+Rozwiązanie zostało zaimplementowane w języku **Python**, z wykorzystaniem bibliotek do analizy danych i wizualizacji.
+
+### Możliwości Wdrożeniowe
+Zgodnie z kontekstem biznesowym, rozwiązanie zaprojektowano tak, aby mogło działać jako **aplikacja cykliczna**. System automatycznie zaciąga nowe dane po ich publikacji, odświeża ocenę branży i generuje zaktualizowane rekomendacje dla analityków.
+
+---
+
+## 🚀 Instrukcja Uruchomienia
+
+1.  Zainstaluj wymagane zależności:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  Uruchom skrypt generujący indeks:
+    ```bash
+    python src/main.py
+    ```

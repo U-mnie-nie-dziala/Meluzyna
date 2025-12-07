@@ -6,7 +6,7 @@ import os
 import numpy as np
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
-
+from datetime import datetime
 
 load_dotenv()
 
@@ -26,9 +26,7 @@ if not all([API_KEY, DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT]):
     sys.exit(1)
 
 db_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
 pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 1000)
 
 
 def tlumacz_i_skroc(nazwa_z_gus):
@@ -65,7 +63,6 @@ params_search = {"name": "przychody z całokształtu działalności", "page-size
 
 baza_danych = []
 znalezione_sekcje = set()
-ranking_series = pd.Series(dtype='float64')
 
 try:
     response = requests.get(url_search, headers=HEADERS, params=params_search)
@@ -105,91 +102,94 @@ try:
 
 except Exception as e:
     print(f"Blad API: {e}")
+    sys.exit(1)
 
-if baza_danych:
-    df = pd.DataFrame(baza_danych)
-    df = df[df['Branża'].str.startswith('[')]
-
-    tabela_numeryczna = df.pivot_table(
-        index="Rok", columns="Branża", values="Przychód (Mld zł)", aggfunc='sum'
-    )
-
-    tabela_numeryczna.replace(0, np.nan, inplace=True)
-    zmiany_roczne = tabela_numeryczna.pct_change()
-    raw_median = zmiany_roczne.median()
-
-    BENCHMARK_WZROSTU = 0.25
-    score_inwestycyjny = (raw_median / BENCHMARK_WZROSTU) * 100
-    score_inwestycyjny = score_inwestycyjny.clip(upper=100)
-    score_inwestycyjny = score_inwestycyjny.fillna(0)
-
-    ranking_series = score_inwestycyjny.sort_values(ascending=False)
-    print("\nOBLICZONY WSKAZNIK (Score 0-100):")
-    print(ranking_series)
-
-else:
+if not baza_danych:
     print("Brak danych API.")
     sys.exit(1)
 
-print("\nPRZYGOTOWANIE DO ZAPISU SQL...")
-print(f"Laczenie z baza PostgreSQL ({DB_HOST})...")
+print("\nPrzetwarzanie danych...")
+df = pd.DataFrame(baza_danych)
+df = df[df['Branża'].str.startswith('[')]
 
+tabela_pivot = df.pivot(index="Branża", columns="Rok", values="Przychód (Mld zł)")
+tabela_pivot = tabela_pivot.sort_index(axis=1)
+
+zmiany_roczne = tabela_pivot.pct_change(axis=1)
+raw_median = zmiany_roczne.median(axis=1)
+BENCHMARK_WZROSTU = 0.25
+score_series = (raw_median / BENCHMARK_WZROSTU) * 100
+score_series = score_series.clip(upper=100).fillna(0)
+
+print("\nPRZYGOTOWANIE DO ZAPISU SQL...")
 try:
     engine = create_engine(db_url)
     conn = engine.connect()
-    print("Polaczono z baza danych.")
-
-    print("Czyszczenie starej tabeli gus...")
     conn.execute(text("TRUNCATE TABLE gus RESTART IDENTITY;"))
     conn.commit()
-    print("Tabela wyczyszczona.")
-
 except Exception as e:
-    print(f"Blad polaczenia/czyszczenia: {e}")
+    print(f"Błąd bazy: {e}")
     sys.exit(1)
 
-last_id = 0
-print(f"Startujemy od ID: {last_id + 1}")
-
 lista_do_zapisu = []
-current_id = last_id + 1
+current_id = 1
+teraz = datetime.now()
 
-for nazwa_branzy, wskaznik in ranking_series.items():
+for nazwa_branzy, wiersz in tabela_pivot.iterrows():
     match = re.search(r'\[([A-Z])\]', nazwa_branzy)
+    if not match: continue
+    pkd_code = match.group(1)
 
-    if match:
-        pkd_code = match.group(1)
-    else:
-        continue
+    wartosci = wiersz.dropna().tolist()
+    wartosci_odwrocone = wartosci[::-1]
+    moj_wskaznik = score_series.get(nazwa_branzy, 0.0)
 
-    row = {
+    row_sql = {
         'id': current_id,
         'pkd': pkd_code,
-        'wskaznik': round(float(wskaznik), 2)
+        'wskaznik': round(float(moj_wskaznik), 2),
+        'timestamp': teraz,
+        'year_0': round(wartosci_odwrocone[0], 2) if len(wartosci_odwrocone) > 0 else None,
+        'year_1': round(wartosci_odwrocone[1], 2) if len(wartosci_odwrocone) > 1 else None,
+        'year_2': round(wartosci_odwrocone[2], 2) if len(wartosci_odwrocone) > 2 else None,
+        'year_3': round(wartosci_odwrocone[3], 2) if len(wartosci_odwrocone) > 3 else None,
+        'year_4': round(wartosci_odwrocone[4], 2) if len(wartosci_odwrocone) > 4 else None,
     }
-    lista_do_zapisu.append(row)
+
+    lista_do_zapisu.append(row_sql)
     current_id += 1
 
-df_to_save = pd.DataFrame(lista_do_zapisu)
-print("Dane do wysylki:")
-print(df_to_save.to_string(index=False))
+if lista_do_zapisu:
+    try:
+        trans = conn.begin()
+        query = text("""
+            INSERT INTO gus (
+                id, pkd, wskaznik, timestamp,
+                year_0, year_1, year_2, year_3, year_4
+            ) VALUES (
+                :id, :pkd, :wskaznik, :timestamp,
+                :year_0, :year_1, :year_2, :year_3, :year_4
+            )
+        """)
 
-if not lista_do_zapisu:
-    print("Brak danych do zapisu.")
-    conn.close()
-    sys.exit(0)
+        for row in lista_do_zapisu:
+            conn.execute(query, row)
 
-try:
-    trans = conn.begin()
-    stmt = text("INSERT INTO gus (id, pkd, wskaznik) VALUES (:id, :pkd, :wskaznik)")
-    for row in lista_do_zapisu:
-        conn.execute(stmt, row)
-    trans.commit()
-    print("SUKCES: Dane zapisane w tabeli gus.")
+        trans.commit()
+        print(f"SUKCES: Zapisano {len(lista_do_zapisu)} rekordów do bazy.")
 
-except Exception as e:
-    if 'trans' in locals():
+        print("Zapisywanie pliku CSV...")
+        df_csv = pd.DataFrame(lista_do_zapisu)
+        if 'timestamp' in df_csv.columns:
+            df_csv = df_csv.drop(columns=['timestamp'])
+
+        df_csv.to_csv("gus_dane.csv", index=False, encoding='utf-8')
+        print("SUKCES: Zapisano plik gus_dane.csv")
+
+    except Exception as e:
         trans.rollback()
-    print(f"BLAD ZAPISU: {e}")
-finally:
-    conn.close()
+        print(f"BŁĄD ZAPISU: {e}")
+else:
+    print("Brak danych do zapisu.")
+
+conn.close()
