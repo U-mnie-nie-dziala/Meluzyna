@@ -16,13 +16,13 @@ const SectorRanking = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = "http://127.0.0.1:8000";
+  const API_URL = "http://127.0.0.1:8001";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch(`${API_URL}/scores`);
-        
+
         if (!response.ok) {
           throw new Error('Błąd pobierania danych');
         }
@@ -30,7 +30,7 @@ const SectorRanking = () => {
         const data = await response.json();
 
         // Filtrujemy "Pozostałe"
-        const filteredData = data.filter((item: SectorRankingItem) => 
+        const filteredData = data.filter((item: SectorRankingItem) =>
           item.section_name !== "Pozostałe"
         );
 
@@ -60,7 +60,7 @@ const SectorRanking = () => {
         return (
           <div key={sector.section_code} className={`ranking-card ${rankClass}`}>
             <div className="rank-position">#{index + 1}</div>
-            
+
             <div className="sector-info">
               <div className="sector-code">PKD: {sector.section_code}</div>
               <h3 className="sector-name">{sector.section_name}</h3>
@@ -68,7 +68,7 @@ const SectorRanking = () => {
 
             <div className="scores-container">
               <div className="score-box final-score">
-                <span className="score-label" style={{color: '#bdc3c7'}}>Wynik</span>
+                <span className="score-label" style={{ color: '#bdc3c7' }}>Wynik</span>
                 <div className="score-value">{sector.final_score.toFixed(1)}</div>
               </div>
             </div>

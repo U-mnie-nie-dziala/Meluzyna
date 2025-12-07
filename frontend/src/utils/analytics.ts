@@ -55,6 +55,8 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
     const defScores = {
       gus_score: null,
       market_score: null,
+      ceidg_score: null,
+      social_score: null,
       final_score: null
     };
 
@@ -78,9 +80,9 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
       // New mapped metrics - using -1 sentinel if data is missing, NO MOCKS
       demographics: -1,
       growthSpeed: s.gus_score !== null ? s.gus_score : -1,
-      mediaSentiment: -1,
+      mediaSentiment: s.social_score !== null ? s.social_score : -1,
       stockMarketSentiment: s.market_score !== null ? s.market_score : -1,
-      combinedScore: s.final_score !== null ? s.final_score : -1,
+      combinedScore: (s.final_score !== null && s.final_score !== 0) ? s.final_score : -1,
     };
   } catch (error) {
     console.error("Error fetching sector analysis:", error);
