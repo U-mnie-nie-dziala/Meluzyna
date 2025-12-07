@@ -16,7 +16,7 @@ const SectorRanking = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = "http://127.0.0.1:8001";
+  const API_URL = "http://127.0.0.1:8000";
 
   useEffect(() => {
     const fetchData = async () => {

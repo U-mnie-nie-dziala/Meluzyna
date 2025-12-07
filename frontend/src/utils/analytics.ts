@@ -29,8 +29,8 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
   try {
     // Dual fetch using soft-handling (return null if failed)
     const [detailsData, scoresData] = await Promise.all([
-      fetch(`http://127.0.0.1:8001/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`http://127.0.0.1:8001/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch(`http://127.0.0.1:8000/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`http://127.0.0.1:8000/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
 
     // If both failed, we really have nothing -> Return explicit "No Data" state

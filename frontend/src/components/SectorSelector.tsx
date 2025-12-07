@@ -19,7 +19,7 @@ export default function SectorSelector({ selectedSector, onSectorChange }: Secto
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8001/categories')
+    fetch('http://127.0.0.1:8000/categories')
       .then(res => res.json())
       .then(data => {
         const formattedSectors = data.map((item: { pkd: string; nazwa: string }) => ({

@@ -36,7 +36,7 @@ export default function ChartsTab({ sector }: ChartsTabProps) {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`http://127.0.0.1:8001/charts/history/${sector}?days=${days}`)
+        fetch(`http://127.0.0.1:8000/charts/history/${sector}?days=${days}`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch history");
                 return res.json();

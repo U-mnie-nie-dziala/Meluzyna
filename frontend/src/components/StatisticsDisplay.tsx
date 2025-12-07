@@ -12,8 +12,8 @@ import { AnalysisData, Sector } from '../types';
 import SectorRanking from '../SectorRanking';
 import ChartsTab from './ChartsTab';
 import { RiskTab } from './tabs/RiskTab';
-import { exampleRiskData } from './exampleHistogramData';
 import YoutubeHistogramPage from './tabs/YoutubeHistogramPage';
+import WykopHistogramPage from './tabs/WykopHistogramPage';
 
 interface StatisticsDisplayProps {
   data: AnalysisData;
@@ -95,7 +95,7 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
         {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */}
         {activeTab === 'performance' && <SectorRanking />}
 
-        {activeTab === 'media' && <YoutubeHistogramPage />}
+        {activeTab === 'media' && <><YoutubeHistogramPage sector={sector} /><WykopHistogramPage sector={sector}/></>}
 
         {activeTab === 'charts' && <ChartsTab sector={sector} />}
 
@@ -115,7 +115,7 @@ function StockMarket({ sector }: { sector: Sector }) {
   useEffect(() => {
     const fetchLatest = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8001/markets/scores/${sector}`);
+        const res = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
         if (res.ok) {
           const data = await res.json();
           setLatest(data);
@@ -154,7 +154,7 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
     const fetchCeidg = async () => {
       setCeidgScore(null);
       try {
-        const response = await fetch(`http://127.0.0.1:8001/ceidg/scores/${sector}`);
+        const response = await fetch(`${process.env.url}/ceidg/scores/${sector}`);
         if (response.ok) {
           const result = await response.json();
           // Sprawdzamy czy to obiekt czy liczba
