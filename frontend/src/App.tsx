@@ -3,23 +3,26 @@ import { TrendingUp, BarChart3 } from 'lucide-react';
 import SectorSelector from './components/SectorSelector';
 import StatisticsDisplay from './components/StatisticsDisplay';
 import { Sector, AnalysisData } from './types';
-import { generateAnalysis } from './utils/analytics';
+import { fetchSectorAnalysis } from './utils/analytics';
 
 function App() {
   const [selectedSector, setSelectedSector] = useState<Sector | ''>('');
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!selectedSector) return;
 
     setIsAnalyzing(true);
 
-    setTimeout(() => {
-      const data = generateAnalysis(selectedSector);
+    try {
+      const data = await fetchSectorAnalysis(selectedSector);
       setAnalysisData(data);
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    } finally {
       setIsAnalyzing(false);
-    }, 1200);
+    }
   };
 
   return (

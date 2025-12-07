@@ -1,12 +1,4 @@
-export type Sector =
-  | 'technology'
-  | 'healthcare'
-  | 'finance'
-  | 'energy'
-  | 'consumer'
-  | 'industrial'
-  | 'realestate'
-  | 'utilities';
+export type Sector = string;
 
 export interface AnalysisData {
   marketCap: string;
@@ -24,4 +16,10 @@ export interface AnalysisData {
   }>;
   riskLevel: 'Low' | 'Medium' | 'High';
   outlook: 'Positive' | 'Neutral' | 'Negative';
+
+  // New metrics (0-100)
+  demographics: number;
+  growthSpeed: number;
+  mediaSentiment: number;
+  stockMarketSentiment: number;
 }

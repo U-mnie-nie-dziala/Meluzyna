@@ -150,9 +150,29 @@ const topPerformersData: Record<Sector, Array<{ name: string; performance: numbe
   ],
 };
 
+// ... existing code ...
+
+// ... existing arrays ...
+
 export function generateAnalysis(sector: Sector): AnalysisData {
-  const baseData = sectorData[sector];
-  const topPerformers = topPerformersData[sector];
+  const baseData = sectorData[sector] || {
+    marketCap: 'N/A',
+    revenue: 'N/A',
+    growth: 0,
+    profitMargin: 0,
+    roe: 0,
+    debtToEquity: 0,
+    peRatio: 0,
+    dividendYield: 0,
+    totalCompanies: 0,
+    riskLevel: 'Medium',
+    outlook: 'Neutral',
+    demographics: 50,
+    growthSpeed: 50,
+    mediaSentiment: 50,
+    stockMarketSentiment: 50,
+  };
+  const topPerformers = topPerformersData[sector] || [];
 
   return {
     marketCap: baseData.marketCap!,
@@ -167,5 +187,47 @@ export function generateAnalysis(sector: Sector): AnalysisData {
     topPerformers,
     riskLevel: baseData.riskLevel!,
     outlook: baseData.outlook!,
+    demographics: baseData.demographics || Math.floor(Math.random() * 100),
+    growthSpeed: baseData.growthSpeed || Math.floor(Math.random() * 100),
+    mediaSentiment: baseData.mediaSentiment || Math.floor(Math.random() * 100),
+    stockMarketSentiment: baseData.stockMarketSentiment || Math.floor(Math.random() * 100),
   };
 }
+
+export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData> {
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    const data = await response.json();
+
+    // Map backend data to frontend AnalysisData
+    // Backend: SectionSchema
+    // Frontend: AnalysisData
+
+    return {
+      marketCap: new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', notation: 'compact' }).format(data.total_cap_pln),
+      revenue: 'N/A', // Not in DB
+      growth: 0, // Not in DB
+      profitMargin: Number(data.median_margin), // Assuming raw value needs formatting? Backend is float.
+      roe: Number(data.median_roe),
+      debtToEquity: 0, // Not in DB
+      peRatio: Number(data.median_pe),
+      dividendYield: Number(data.median_divident_yield),
+      totalCompanies: data.companies_count,
+      topPerformers: [], // Not in DB
+      riskLevel: data.safety_score > 70 ? 'Low' : data.safety_score > 40 ? 'Medium' : 'High',
+      outlook: data.rating === 'AAA' || data.rating === 'AA' ? 'Positive' : data.rating === 'CCC' ? 'Negative' : 'Neutral', // Simple mapping
+      demographics: Math.floor(Math.random() * 100), // Mock
+      growthSpeed: Math.floor(Math.random() * 100), // Mock
+      mediaSentiment: Math.floor(Math.random() * 100), // Mock
+      stockMarketSentiment: Math.floor(Math.random() * 100), // Mock
+    };
+  } catch (error) {
+    console.error("Error fetching sector analysis:", error);
+    // Fallback to local data if fetch fails (safe failover)
+    return generateAnalysis(sector);
+  }
+}
+
