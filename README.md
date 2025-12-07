@@ -25,10 +25,10 @@ Projekt składa się z dwóch głównych komponentów oraz skryptów pomocniczyc
 - **Lucide React**: Ikony.
 
 ### Backend
-- **FastAPI**: Nowoczesny framework webowy dla Pythona.
-- **SQLAlchemy (AsyncIO)**: ORM do obsługi bazy danych PostgreSQL.
-- **Pydantic**: Walidacja danych.
-- **Uvicorn**: Serwer ASGI.
+- **FastAPI**
+- **SQLAlchemy (AsyncIO)**
+- **Pydantic**
+- **Uvicorn**
 
 ## Uruchomienie
 
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-API będzie dostępne pod adresem: `http://127.0.0.1:8001`. Dokumentacja Swagger UI: `http://127.0.0.1:8001/docs`.
+API będzie dostępne pod adresem: `http://127.0.0.1:8000`. Dokumentacja Swagger UI: `http://127.0.0.1:8000/docs`.
 
 ### 2. Frontend
 
@@ -75,4 +75,4 @@ Aplikacja będzie dostępna pod adresem wskazanym przez Vite (zazwyczaj `http://
 
 ## Autor
 
-HackNation Team
+U mnie (nie) działa
