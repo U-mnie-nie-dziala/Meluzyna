@@ -466,5 +466,26 @@ async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
         for r in rows
     ]
 
+@app.get("/post_wykop")
+async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
+    """
+    Returns all rows from komentarz_youtube (YoutubeCommentDB)
+    """
+    result = await db.execute(select(YoutubeCommentDB))
+    rows = result.scalars().all()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Brak danych w komentarz_youtube")
+
+    return [
+        {
+            "id": r.id,
+            "tag_id": r.tag_id,
+            "post": r.komentarz,
+            "timestamp": r.timestamp,
+            "emocje": r.emocje
+        }
+        for r in rows
+    ]
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
