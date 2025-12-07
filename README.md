@@ -255,6 +255,47 @@ Aplikacja będzie dostępna pod adresem wskazanym przez Vite (zazwyczaj `http://
 4.  **Wykresy Historyczne**: Wizualizacja trendów w czasie dla wskaźników nastrojów i danych ekonomicznych.
 5.  **Analiza Ryzyka**: Prezentacja poziomu ryzyka inwestycyjnego ("Low", "Medium", "High") na podstawie wskaźników finansowych.
 
+
+## Uruchamianie Projektu za Pomocą Docker Compose
+
+Projekt można łatwo uruchomić i zarządzać nim za pomocą Docker Compose, co konteneruje zarówno backend FastAPI, jak i frontend React/Vite.
+
+### Wymagania wstępne
+
+1.  Zainstalowany [**Docker**](https://docs.docker.com/get-docker/).
+
+### Kroki Uruchamiania
+
+1.  **Upewnij się, że pliki są na swoim miejscu:**
+    * `Dockerfile` (dla backendu) znajduje się w katalogu głównym.
+    * `Dockerfile.frontend` (dla frontend) znajduje się w katalogu `./frontend/`.
+    * `docker-compose.yml` znajduje się w katalogu głównym.
+
+2.  **Uruchomienie Usług:**
+    Przejdź do katalogu głównego projektu w terminalu (tam, gdzie znajduje się `docker-compose.yml`) i wykonaj komendę:
+
+    ```bash
+    docker compose up -d --build
+    ```
+    
+3.  **Sprawdzenie Statusu:**
+    Użyj komendy, aby upewnić się, że oba kontenery działają:
+    ```bash
+    docker compose ps
+    ```
+
+4.  **Dostęp do Aplikacji:**
+    Po pomyślnym uruchomieniu, aplikacje będą dostępne pod adresami:
+
+    * **Frontend (UI):** `http://localhost:3000``
+
+### Zatrzymywanie Usług
+
+Aby zatrzymać i usunąć kontenery, sieci oraz obrazy utworzone przez Compose, użyj:
+
+```bash
+docker compose down
+
 ## Autor
 
 U mnie (nie) działa
