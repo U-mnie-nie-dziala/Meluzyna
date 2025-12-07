@@ -22,7 +22,7 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const tabs = [
-    { id: 'overview' as Tab, label: 'Overview', icon: BarChart3 },
+    { id: 'overview' as Tab, label: 'Przegląd', icon: BarChart3 },
     { id: 'performance' as Tab, label: 'Performance', icon: Activity },
     { id: 'risk' as Tab, label: 'Risk Analysis', icon: AlertCircle },
     { id: 'stock-market' as Tab, label: 'Giełda', icon: AlertCircle },
@@ -34,10 +34,10 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
         <h2 className="text-xl font-bold text-slate-900">
-          {sectorName} Sector Analysis
+          Analiza sektora {sectorName}
         </h2>
         <p className="text-sm text-slate-600 mt-1">
-          Comprehensive financial statistics and insights
+          Szczegółowe dane finansowe i kluczowe wnioski
         </p>
       </div>
 
@@ -112,28 +112,67 @@ function StockMarket({ sector }: { sector: Sector }) {
 
 
 function OverviewTab({ data }: { data: AnalysisData }) {
+  // Determine color for large score
+  const isNoData = data.combinedScore === -1;
+
+  let scoreColor = '';
+  let scoreBg = '';
+
+  if (isNoData) {
+    scoreColor = 'text-slate-400';
+    scoreBg = 'bg-slate-50 border-slate-200';
+  } else {
+    scoreColor = data.combinedScore >= 60 ? 'text-emerald-600' : data.combinedScore >= 40 ? 'text-yellow-600' : 'text-red-600';
+    scoreBg = data.combinedScore >= 60 ? 'bg-emerald-50 border-emerald-200' : data.combinedScore >= 40 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200';
+  }
+
+  // Icon logic for Combined Score: Same behavior as ScoreCards (Result-based)
+  let CombinedIcon = AlertCircle;
+  if (!isNoData) {
+    if (data.combinedScore >= 60) CombinedIcon = TrendingUp;
+    else if (data.combinedScore >= 40) CombinedIcon = Activity;
+    else CombinedIcon = TrendingDown;
+  }
+
   return (
     <div className="space-y-6">
+      {/* Large Combined Score Indicator */}
+      <div className={`rounded-2xl p-6 border-2 flex items-center justify-between ${scoreBg}`}>
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 mb-1">Syntetyczny Wskaźnik Sektora</h3>
+          <p className="text-slate-600 text-sm max-w-md">
+            Zbiorczy wskaźnik łączący ocenę bezpieczeństwa giełdowego, opinie mediów, demografię firm i wskaźniki ekonomiczne GUS.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <span className={`block text-5xl font-black ${scoreColor}`}>
+              {isNoData ? '--' : data.combinedScore}
+            </span>
+            <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
+              {isNoData ? 'Brak danych' : '/ 100 Points'}
+            </span>
+          </div>
+          <CombinedIcon className={`w-12 h-12 ${scoreColor}`} />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ScoreCard
-          label="Demografia firm"
+          label="Demografia firm CEIDG"
           value={data.demographics}
-          icon={Users}
         />
         <ScoreCard
-          label="Tempo wzrostu"
+          label="Tempo wzrostu GUS"
           value={data.growthSpeed}
-          icon={TrendingUp}
         />
         <ScoreCard
           label="Media"
           value={data.mediaSentiment}
-          icon={Newspaper}
         />
         <ScoreCard
           label="Giełda"
           value={data.stockMarketSentiment}
-          icon={BarChart3}
         />
       </div>
 
@@ -288,20 +327,22 @@ function RiskTab({ data }: { data: AnalysisData }) {
 function ScoreCard({
   label,
   value,
-  icon: Icon,
 }: {
   label: string;
   value: number;
-  icon: React.ComponentType<{ className?: string }>;
 }) {
+  const isNoData = value === -1;
+
   // Color scale logic: Red (0) -> Yellow (50) -> Green (100)
   const getColorClass = (val: number) => {
+    if (isNoData) return 'text-slate-400';
     if (val >= 60) return 'text-emerald-500'; // High/Good
     if (val >= 40) return 'text-yellow-500';  // Mid/Neutral
     return 'text-red-500';                    // Low/Bad
   };
 
   const getBgClass = (val: number) => {
+    if (isNoData) return 'bg-slate-50 border-slate-200';
     if (val >= 60) return 'bg-emerald-50 border-emerald-100';
     if (val >= 40) return 'bg-yellow-50 border-yellow-100';
     return 'bg-red-50 border-red-100';
@@ -309,9 +350,10 @@ function ScoreCard({
 
   // Icon logic: Zigzag arrows
   const getTrendIcon = (val: number) => {
-    if (val >= 60) return <TrendingUp className="w-6 h-6" />;
-    if (val >= 40) return <Activity className="w-6 h-6" />; // Horizontal-ish zigzag
-    return <TrendingDown className="w-6 h-6" />;
+    if (isNoData) return <AlertCircle className="w-8 h-8 text-slate-300" />;
+    if (val >= 60) return <TrendingUp className="w-8 h-8" />;
+    if (val >= 40) return <Activity className="w-8 h-8" />; // Horizontal-ish zigzag
+    return <TrendingDown className="w-8 h-8" />;
   };
 
   const colorClass = getColorClass(value);
@@ -319,26 +361,33 @@ function ScoreCard({
 
   return (
     <div className={`border rounded-lg p-5 hover:shadow-md transition-all ${bgClass}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className={`p-2 rounded-lg bg-white/60 ${colorClass}`}>
-          <Icon className="w-5 h-5" />
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        {/* Increased Label Size (text-lg font-bold) */}
+        <p className="text-lg font-bold text-slate-700">{label}</p>
+
+        {/* Only Trend Icon - No left icon */}
         <div className={colorClass}>
           {getTrendIcon(value)}
         </div>
       </div>
-      <p className="text-sm font-medium text-slate-600 mb-1">{label}</p>
+
       <div className="flex items-end gap-2">
-        <p className={`text-2xl font-bold ${colorClass}`}>{value}/100</p>
+        {isNoData ? (
+          <p className="text-xl font-bold text-slate-400">Brak danych</p>
+        ) : (
+          <p className={`text-2xl font-bold ${colorClass}`}>{value}/100</p>
+        )}
       </div>
 
-      {/* Progress Bar Visual */}
-      <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${valToTailwind(value)}`}
-          style={{ width: `${value}%` }}
-        />
-      </div>
+      {/* Progress Bar Visual - Hidden if No Data */}
+      {!isNoData && (
+        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${valToTailwind(value)}`}
+            style={{ width: `${value}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

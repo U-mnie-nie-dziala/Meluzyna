@@ -22,4 +22,5 @@ export interface AnalysisData {
   growthSpeed: number;
   mediaSentiment: number;
   stockMarketSentiment: number;
+  combinedScore: number;
 }
