@@ -1,3 +1,4 @@
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,7 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 
 
-export function RiskTab({ data }: { data: AnalysisData }) {
+export function RiskTab({ data, name }: { data: AnalysisData, name: string }) {
   const buildHistogram = (records: RecordItem[]) => {
     const counts = Array(101).fill(0);
 
@@ -50,9 +51,14 @@ export function RiskTab({ data }: { data: AnalysisData }) {
 
       <div className="p-6 bg-white border border-slate-200 rounded-lg shadow-sm">
         <h3 className="text-md font-semibold text-slate-800 mb-4">
-          Histogram nastrojów komentarzy na Youtube w danym sektorze (0–100)
+          Histogram nastrojów komentarzy na {name} w danym sektorze (0–100)
         </h3>
-        <Bar data={histogramData} />
+        <div className="h-[400px] w-full">
+          <Bar
+            data={histogramData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
+        </div>
       </div>
     </div>
   );

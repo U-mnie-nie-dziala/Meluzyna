@@ -9,10 +9,11 @@ import {
   Award,
 } from 'lucide-react';
 import { AnalysisData, Sector } from '../types';
-import SectorRanking from '../SectorRanking'; // <--- Import Twojego rankingu
+import SectorRanking from '../SectorRanking';
+import ChartsTab from './ChartsTab';
 import { RiskTab } from './tabs/RiskTab';
-import { exampleRiskData } from './exampleHistogramData';
 import YoutubeHistogramPage from './tabs/YoutubeHistogramPage';
+import WykopHistogramPage from './tabs/WykopHistogramPage';
 
 interface StatisticsDisplayProps {
   data: AnalysisData;
@@ -21,17 +22,31 @@ interface StatisticsDisplayProps {
 
 
 
-type Tab = 'overview' | 'performance' | 'media' | 'stock-market';
+type Tab = 'overview' | 'performance' | 'media' | 'stock-market' | 'charts';
 
 export default function StatisticsDisplay({ data, sector }: StatisticsDisplayProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+
 
   const tabs = [
     { id: 'overview' as Tab, label: 'Przegląd', icon: BarChart3 },
     { id: 'performance' as Tab, label: 'Ranking Sektorów', icon: Activity },
     { id: 'media' as Tab, label: 'Media', icon: AlertCircle },
+    { id: 'charts' as Tab, label: 'Wykresy', icon: TrendingUp },
     { id: 'stock-market' as Tab, label: 'Giełda', icon: AlertCircle },
   ];
+
+  // ...
+
+  {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */ }
+  { activeTab === 'performance' && <SectorRanking /> }
+
+  { activeTab === 'media' && <RiskTab data={data} /> }
+
+  { activeTab === 'charts' && <ChartsTab sector={sector} /> }
+
+  { activeTab === 'stock-market' && <StockMarket sector={sector} /> }
 
   const sectorName = sector.charAt(0).toUpperCase() + sector.slice(1);
 
@@ -76,12 +91,14 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
       <div className="p-6">
         {/* Przekazujemy sector do OverviewTab dla CEIDG */}
         {activeTab === 'overview' && <OverviewTab data={data} sector={sector} />}
-        
+
         {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */}
         {activeTab === 'performance' && <SectorRanking />}
-        
-        {activeTab === 'media' && <YoutubeHistogramPage /> }
-        
+
+        {activeTab === 'media' && <><YoutubeHistogramPage sector={sector} /><WykopHistogramPage sector={sector}/></>}
+
+        {activeTab === 'charts' && <ChartsTab sector={sector} />}
+
         {activeTab === 'stock-market' && <StockMarket sector={sector} />}
       </div>
     </div>
@@ -99,9 +116,9 @@ function StockMarket({ sector }: { sector: Sector }) {
     const fetchLatest = async () => {
       try {
         const res = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
-        if(res.ok) {
-            const data = await res.json();
-            setLatest(data);
+        if (res.ok) {
+          const data = await res.json();
+          setLatest(data);
         }
       } catch (error) {
         console.error("Error fetching sector score:", error);
@@ -118,7 +135,7 @@ function StockMarket({ sector }: { sector: Sector }) {
       <h3 className="text-lg font-bold mb-4">Dane Giełdowe ({sector})</h3>
       {latest ? (
         <pre className="bg-slate-50 p-4 rounded-lg text-sm overflow-auto">
-            {JSON.stringify(latest, null, 2)}
+          {JSON.stringify(latest, null, 2)}
         </pre>
       ) : (
         "Ładowanie..."
@@ -129,34 +146,34 @@ function StockMarket({ sector }: { sector: Sector }) {
 
 function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
   const isNoData = data.combinedScore === -1;
-  
+
   // --- NOWE LOGIKA DLA CEIDG ---
   const [ceidgScore, setCeidgScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCeidg = async () => {
-        setCeidgScore(null); 
-        try {
-            const response = await fetch(`http://127.0.0.1:8000/ceidg/scores/${sector}`);
-            if (response.ok) {
-                const result = await response.json();
-                // Sprawdzamy czy to obiekt czy liczba
-                const scoreValue = result.score || result.wskaznik || result.final_score || result.safety_score;
-                
-                if (scoreValue !== undefined) {
-                    setCeidgScore(Number(scoreValue));
-                } else if (typeof result === 'number') {
-                    setCeidgScore(result);
-                }
-            }
-        } catch (e) {
-            console.error("Błąd pobierania CEIDG", e);
-            setCeidgScore(null);
+      setCeidgScore(null);
+      try {
+        const response = await fetch(`${process.env.url}/ceidg/scores/${sector}`);
+        if (response.ok) {
+          const result = await response.json();
+          // Sprawdzamy czy to obiekt czy liczba
+          const scoreValue = result.score || result.wskaznik || result.final_score || result.safety_score;
+
+          if (scoreValue !== undefined) {
+            setCeidgScore(Number(scoreValue));
+          } else if (typeof result === 'number') {
+            setCeidgScore(result);
+          }
         }
+      } catch (e) {
+        console.error("Błąd pobierania CEIDG", e);
+        setCeidgScore(null);
+      }
     }
 
     if (sector) {
-        fetchCeidg();
+      fetchCeidg();
     }
   }, [sector]);
   // -----------------------------
@@ -206,9 +223,9 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
         {/* Dane z CEIDG */}
         <ScoreCard
           label="Demografia firm CEIDG"
-          value={ceidgScore !== null ? ceidgScore : -1} 
+          value={ceidgScore !== null ? ceidgScore : -1}
         />
-        
+
         <ScoreCard
           label="Tempo wzrostu GUS"
           value={data.growthSpeed}
@@ -262,21 +279,21 @@ function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
 
 
 function RiskMetricCard({ label, value, optimal, status }: { label: string, value: string, optimal: string, status: 'good' | 'moderate' | 'high' }) {
-    const getStatusColor = () => {
-        if (status === 'good') return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-        if (status === 'moderate') return 'text-amber-600 bg-amber-50 border-amber-200';
-        return 'text-red-600 bg-red-50 border-red-200';
-    }
+  const getStatusColor = () => {
+    if (status === 'good') return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+    if (status === 'moderate') return 'text-amber-600 bg-amber-50 border-amber-200';
+    return 'text-red-600 bg-red-50 border-red-200';
+  }
 
-    return (
-        <div className={`p-4 rounded-lg border ${getStatusColor()}`}>
-            <p className="text-xs font-semibold opacity-80 uppercase mb-1">{label}</p>
-            <div className="flex justify-between items-end">
-                <p className="text-2xl font-bold">{value}</p>
-                <p className="text-xs opacity-80">Optymalnie: {optimal}</p>
-            </div>
-        </div>
-    )
+  return (
+    <div className={`p-4 rounded-lg border ${getStatusColor()}`}>
+      <p className="text-xs font-semibold opacity-80 uppercase mb-1">{label}</p>
+      <div className="flex justify-between items-end">
+        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-xs opacity-80">Optymalnie: {optimal}</p>
+      </div>
+    </div>
+  )
 }
 
 function ScoreCard({ label, value }: { label: string; value: number }) {
@@ -286,7 +303,7 @@ function ScoreCard({ label, value }: { label: string; value: number }) {
     if (isNoData) return 'text-slate-400';
     if (val >= 60) return 'text-emerald-500';
     if (val >= 40) return 'text-yellow-500';
-    return 'text-red-500'; 
+    return 'text-red-500';
   };
 
   const getBgClass = (val: number) => {

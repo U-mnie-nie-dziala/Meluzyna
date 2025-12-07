@@ -11,6 +11,7 @@ function App() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+
   const handleAnalyze = async () => {
     if (!selectedSector) return;
 

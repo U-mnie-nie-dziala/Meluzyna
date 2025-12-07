@@ -5,7 +5,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selecti
 from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, select, desc, BigInteger, func, TIMESTAMP, Float
 from pydantic import BaseModel, ConfigDict # Changed here
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
+from sqlalchemy import cast, Date
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -52,6 +53,7 @@ class GusScores(Base):
     id = Column(Integer, primary_key=True, index=True)
     wskaznik = Column(Numeric(4, 2))
     pkd = Column(String(2), ForeignKey("pkd.pkd"), nullable=False)
+    timestamp = Column(TIMESTAMP)
     pkd_rel = relationship("PKD", back_populates="pkds")
 
 class CeidgDB(Base):
@@ -142,6 +144,15 @@ class CeidgSimpleSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class HistoryPoint(BaseModel):
+    date: date
+    wykop: Optional[float] = None
+    youtube: Optional[float] = None
+    ceidg: Optional[float] = None
+    gus: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 app = FastAPI()
 
@@ -444,6 +455,74 @@ async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depen
         "final_score": round(final, 2)
     }
 
+@app.get("/charts/history/{section_code}", response_model=List[HistoryPoint])
+async def get_history_charts(section_code: str, days: int = 90, db: AsyncSession = Depends(get_db)):
+    code = section_code.upper()
+    start_date = date.today() - timedelta(days=days)
+
+    # Helper for date grouping
+    def daily_avg(model, date_col, value_col):
+        return (
+            select(cast(date_col, Date).label('day'), func.avg(value_col))
+            .where(date_col >= start_date)
+            .group_by('day')
+            .order_by('day')
+        )
+
+    # 1. Wykop
+    tags_sub = select(TagDB.id).where(TagDB.pkd_id == code)
+    stmt_wykop = (
+        select(cast(WykopPostDB.timestamp, Date).label('day'), func.avg(WykopPostDB.emocje))
+        .where(WykopPostDB.tag_id.in_(tags_sub), WykopPostDB.timestamp >= start_date)
+        .group_by('day')
+    )
+    res_wykop = await db.execute(stmt_wykop)
+    wykop_data = {row[0]: row[1] for row in res_wykop.all()}
+
+    # 2. Youtube
+    stmt_yt = (
+        select(cast(YoutubeCommentDB.timestamp, Date).label('day'), func.avg(YoutubeCommentDB.emocje))
+        .where(YoutubeCommentDB.tag_id.in_(tags_sub), YoutubeCommentDB.timestamp >= start_date)
+        .group_by('day')
+    )
+    res_yt = await db.execute(stmt_yt)
+    yt_data = {row[0]: row[1] for row in res_yt.all()}
+
+    # 3. CEIDG
+    stmt_ceidg = (
+        select(cast(CeidgDB.utworzono, Date).label('day'), func.avg(CeidgDB.wskaznik))
+        .where(CeidgDB.pkd_id == code, CeidgDB.utworzono >= start_date)
+        .group_by('day')
+    )
+    res_ceidg = await db.execute(stmt_ceidg)
+    ceidg_data = {row[0]: float(row[1]) for row in res_ceidg.all()}
+
+    # 4. GUS
+    stmt_gus = (
+        select(cast(GusScores.timestamp, Date).label('day'), func.avg(GusScores.wskaznik))
+        .where(GusScores.pkd == code, GusScores.timestamp >= start_date)
+        .group_by('day')
+    )
+    res_gus = await db.execute(stmt_gus)
+    # Gus keys might be date or string depending on driver, assuming date object
+    gus_data = {row[0]: float(row[1]) for row in res_gus.all()}
+
+    # Merge
+    all_dates = set(wykop_data.keys()) | set(yt_data.keys()) | set(ceidg_data.keys()) | set(gus_data.keys())
+    sorted_dates = sorted(list(all_dates))
+
+    result = []
+    for d in sorted_dates:
+        result.append({
+            "date": d,
+            "wykop": wykop_data.get(d),
+            "youtube": yt_data.get(d),
+            "ceidg": ceidg_data.get(d),
+            "gus": gus_data.get(d)
+        })
+
+    return result
+
 @app.get("/komentarz_youtube")
 async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
     """
@@ -467,7 +546,29 @@ async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
     ]
 
 @app.get("/post_wykop")
-async def get_all_youtube_comments(db: AsyncSession = Depends(get_db)):
+async def get_all_wykop_comments(db: AsyncSession = Depends(get_db)):
+    """
+    Returns all rows from komentarz_youtube (YoutubeCommentDB)
+    """
+    result = await db.execute(select(YoutubeCommentDB))
+    rows = result.scalars().all()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="Brak danych w komentarz_youtube")
+
+    return [
+        {
+            "id": r.id,
+            "tag_id": r.tag_id,
+            "post": r.komentarz,
+            "timestamp": r.timestamp,
+            "emocje": r.emocje
+        }
+        for r in rows
+    ]
+
+@app.get("/post_wykop/{sector}")
+async def get_all_wykop_comments(db: AsyncSession = Depends(get_db)):
     """
     Returns all rows from komentarz_youtube (YoutubeCommentDB)
     """
