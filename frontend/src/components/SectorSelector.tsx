@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Building2, ChevronDown, Check } from 'lucide-react';
 import { Sector } from '../types';
+import { AnalysisData } from './tabs/types';
+import { fetchYoutubeHistogram } from './tabs/fetchYoutubeHistogram';
+import { RiskTab } from './tabs/RiskTab';
 
 interface SectorSelectorProps {
   selectedSector: Sector | '';
   onSectorChange: (sector: Sector | '') => void;
 }
+
+
 
 
 
