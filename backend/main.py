@@ -7,10 +7,8 @@ from pydantic import BaseModel, ConfigDict # Changed here
 from typing import List, Optional
 from datetime import date
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn # Needed to run the server
+import uvicorn
 
-# --- DATABASE CONFIG ---
-# WARNING: In production, use os.getenv() for passwords!
 DB_USER = "hack"
 DB_PASS = "HackNation!"
 DB_HOST = "212.132.76.195"
@@ -21,7 +19,6 @@ engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
 
-# --- DB MODELS ---
 class ReportDB(Base):
     __tablename__ = "report"
     id = Column(Integer, primary_key=True, index=True)
@@ -75,7 +72,7 @@ class YoutubeCommentDB(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     komentarz = Column(String)
-    tag_id = Column(Integer, ForeignKey("tags.id"))  # Klucz obcy do tagów
+    tag_id = Column(Integer, ForeignKey("tags.id"))
     timestamp = Column(TIMESTAMP)
     emocje = Column(Integer)
 
@@ -84,11 +81,10 @@ class WykopPostDB(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     post = Column(String)
-    tag_id = Column(Integer, ForeignKey("tags.id"))  # Klucz obcy do tagów
+    tag_id = Column(Integer, ForeignKey("tags.id"))
     emocje = Column(Integer)
     timestamp = Column(TIMESTAMP)
 
-# --- PYDANTIC SCHEMAS (UPDATED FOR V2) ---
 class SectionSchema(BaseModel):
     section_code: str
     section_name: str
@@ -101,7 +97,6 @@ class SectionSchema(BaseModel):
     total_cap_pln: int
     companies_count: int
 
-    # NEW SYNTAX: Replaces class Config
     model_config = ConfigDict(from_attributes=True)
 
 class ReportSchema(BaseModel):
@@ -147,7 +142,7 @@ class CeidgSimpleSchema(BaseModel):
 
     class Config:
         from_attributes = True
-# --- APP SETUP ---
+
 app = FastAPI()
 
 app.add_middleware(
@@ -166,7 +161,6 @@ async def get_db():
 def read_root():
     return {"Hello": "World"}
 
-# --- ROUTES ---
 
 @app.get("/markets/reports/latest", response_model=ReportSchema)
 async def get_latest_report(db: AsyncSession = Depends(get_db)):
@@ -177,7 +171,6 @@ async def get_latest_report(db: AsyncSession = Depends(get_db)):
     if not latest_report:
         raise HTTPException(status_code=404, detail="Brak raportów w bazie")
 
-    # Load relationship
     stmt_full = select(ReportDB).options(selectinload(ReportDB.sections)).where(ReportDB.id == latest_report.id)
     result_full = await db.execute(stmt_full)
     return result_full.scalars().first()
@@ -211,7 +204,7 @@ async def get_sector_history(section_code: str, db: AsyncSession = Depends(get_d
     result = await db.execute(stmt)
     return result.scalars().all()
 
-# FIXED: Added leading slash /
+
 @app.get("/markets/scores/latest", response_model=List[SimpleScoreSchema])
 async def get_latest_scores_only(db: AsyncSession = Depends(get_db)):
     subquery = select(ReportDB.id).order_by(desc(ReportDB.date)).limit(1).scalar_subquery()
@@ -223,7 +216,7 @@ async def get_latest_scores_only(db: AsyncSession = Depends(get_db)):
     result = await db.execute(stmt)
     return result.scalars().all()
 
-# FIXED: Added leading slash /
+
 @app.get("/markets/scores/{section_code}", response_model=SectionSchema)
 async def get_single_sector_score(section_code: str, db: AsyncSession = Depends(get_db)):
     stmt = (
@@ -252,18 +245,14 @@ async def get_all_categories(db: AsyncSession = Depends(get_db)):
 
 @app.get("/ceidg/scores", response_model=List[CeidgSimpleSchema])
 async def get_all_ceidg_scores(db: AsyncSession = Depends(get_db)):
-    """
-    Pobiera surowe wyniki (wskaźniki) dla wszystkich sekcji z tabeli CEIDG.
-    """
+
     stmt = select(CeidgDB)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 @app.get("/ceidg/scores/{section_code}", response_model=CeidgSimpleSchema)
 async def get_ceidg_score_by_code(section_code: str, db: AsyncSession = Depends(get_db)):
-    """
-    Pobiera wynik z CEIDG dla wybranej sekcji (np. 'F').
-    """
+
     stmt = (
         select(CeidgDB)
         .where(CeidgDB.pkd_id == section_code.upper())
@@ -281,41 +270,26 @@ async def get_ceidg_score_by_code(section_code: str, db: AsyncSession = Depends(
 
 @app.get("/scores", response_model=List[CombinedScoreSchema])
 async def get_combined_scores(db: AsyncSession = Depends(get_db)):
-    """
-    Agreguje wyniki z 4 źródeł: Market, GUS, CEIDG, Social Media.
-    """
 
-    # ==========================
-    # 1. POBRANIE DANYCH (MARKET, GUS, CEIDG - bez zmian)
-    # ==========================
-
-    # A. RYNEK
     latest_report_subquery = select(ReportDB.id).order_by(desc(ReportDB.date)).limit(1).scalar_subquery()
     res_market = await db.execute(select(SectionDB).where(SectionDB.report_id == latest_report_subquery))
     market_map = {row.section_code: row for row in res_market.scalars().all()}
 
-    # B. GUS
     res_gus = await db.execute(select(GusScores, PKD).join(PKD))
     gus_map = {row[0].pkd: row for row in res_gus.all()}
 
-    # C. CEIDG (PKD_ID z tabeli ceidg)
     res_ceidg = await db.execute(select(CeidgDB))
     ceidg_map = {row.pkd_id: float(row.wskaznik) for row in res_ceidg.scalars().all()}
 
-    # ==========================
-    # 2. SOCIAL MEDIA (NOWA LOGIKA)
-    # ==========================
 
-    # A. Średnia z YouTube (JOIN komentarz_youtube -> tag -> group by tag.pkd_id)
     stmt_yt = (
         select(TagDB.pkd_id, func.avg(YoutubeCommentDB.emocje))
         .join(TagDB, YoutubeCommentDB.tag_id == TagDB.id)
         .group_by(TagDB.pkd_id)
     )
     res_yt = await db.execute(stmt_yt)
-    yt_rows = res_yt.all()  # [('J', 60.5), ('F', 30.0)...]
+    yt_rows = res_yt.all()
 
-    # B. Średnia z Wykopu (JOIN post_wykop -> tag -> group by tag.pkd_id)
     stmt_wyk = (
         select(TagDB.pkd_id, func.avg(WykopPostDB.emocje))
         .join(TagDB, WykopPostDB.tag_id == TagDB.id)
@@ -324,7 +298,6 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
     res_wyk = await db.execute(stmt_wyk)
     wyk_rows = res_wyk.all()
 
-    # C. Łączenie wyników YT i Wykop w jedną mapę
     social_temp = {}
 
     for pkd, score in yt_rows:
@@ -337,15 +310,10 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
             if pkd not in social_temp: social_temp[pkd] = []
             social_temp[pkd].append(float(score))
 
-    # Wyliczamy ostateczną średnią Social Score
     social_map = {}
     for pkd, values in social_temp.items():
         if values:
             social_map[pkd] = sum(values) / len(values)
-
-    # ==========================
-    # 3. AGREGACJA KOŃCOWA
-    # ==========================
 
     all_codes = set(market_map.keys()) | set(gus_map.keys()) | set(ceidg_map.keys()) | set(social_map.keys())
 
@@ -354,11 +322,9 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
     for code in all_codes:
         valid_values = []
 
-        # Zmienne wyjściowe
         m_score, g_score, c_score, s_score = None, None, None, None
         section_name = "Nieznana sekcja"
 
-        # 1. Market
         if code in market_map:
             item = market_map[code]
             val = float(item.safety_score)
@@ -366,7 +332,6 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
             valid_values.append(val)
             section_name = item.section_name
 
-        # 2. GUS
         if code in gus_map:
             item, pkd_info = gus_map[code]
             val = float(item.wskaznik)
@@ -375,19 +340,16 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
             if section_name == "Nieznana sekcja":
                 section_name = pkd_info.nazwa
 
-        # 3. CEIDG
         if code in ceidg_map:
             val = ceidg_map[code]
             c_score = val
             valid_values.append(val)
 
-        # 4. SOCIAL MEDIA
         if code in social_map:
             val = social_map[code]
             s_score = round(val, 2)
             valid_values.append(val)
 
-        # Średnia ze wszystkich dostępnych źródeł
         if valid_values:
             final_val = sum(valid_values) / len(valid_values)
         else:
@@ -411,44 +373,34 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
 async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depends(get_db)):
     code = section_code.upper()
 
-    # 1. Market
     latest_sub = select(ReportDB.id).order_by(desc(ReportDB.date)).limit(1).scalar_subquery()
     res_m = await db.execute(select(SectionDB).where(SectionDB.report_id == latest_sub, SectionDB.section_code == code))
     market_entry = res_m.scalars().first()
 
-    # 2. GUS
     res_g = await db.execute(select(GusScores, PKD).join(PKD).where(GusScores.pkd == code))
     gus_entry = res_g.first()
 
-    # 3. CEIDG
     res_c = await db.execute(select(CeidgDB).where(CeidgDB.pkd_id == code))
     ceidg_entry = res_c.scalars().first()
 
-    # 4. SOCIAL MEDIA (Dla jednego sektora)
-    # Szukamy tagów, które mają pkd_id równe naszemu kodowi
     tags_subquery = select(TagDB.id).where(TagDB.pkd_id == code)
 
-    # Średnia Youtube dla tych tagów
     res_yt = await db.execute(
         select(func.avg(YoutubeCommentDB.emocje)).where(YoutubeCommentDB.tag_id.in_(tags_subquery)))
     yt_avg = res_yt.scalar()
 
-    # Średnia Wykop dla tych tagów
     res_wyk = await db.execute(select(func.avg(WykopPostDB.emocje)).where(WykopPostDB.tag_id.in_(tags_subquery)))
     wyk_avg = res_wyk.scalar()
 
-    # Łączymy w jedną liczbę
     social_vals = []
     if yt_avg is not None: social_vals.append(yt_avg)
     if wyk_avg is not None: social_vals.append(wyk_avg)
 
     social_score = sum(social_vals) / len(social_vals) if social_vals else None
 
-    # Sprawdzenie czy cokolwiek znaleziono
     if not any([market_entry, gus_entry, ceidg_entry, social_score is not None]):
         raise HTTPException(status_code=404, detail="Brak danych dla tego sektora")
 
-    # Agregacja do średniej
     valid_values = []
 
     m_val = None
@@ -474,7 +426,6 @@ async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depen
         s_val = float(social_score)
         valid_values.append(s_val)
 
-    # Nazwa
     name = "Nieznana"
     if market_entry:
         name = market_entry.section_name
@@ -493,8 +444,5 @@ async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depen
         "final_score": round(final, 2)
     }
 
-
-# --- ENTRY POINT (RUN SERVER) ---
 if __name__ == "__main__":
-    # This allows you to run the file directly in PyCharm
     uvicorn.run(app, host="127.0.0.1", port=8000)
