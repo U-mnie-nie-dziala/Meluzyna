@@ -2,7 +2,7 @@ from numbers import Number
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload
-from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, select, desc
+from sqlalchemy import Column, Integer, String, Date, Numeric, ForeignKey, select, desc, BigInteger, TIMESTAMP
 from pydantic import BaseModel, ConfigDict # Changed here
 from typing import List, Optional
 from datetime import date
@@ -57,6 +57,13 @@ class GusScores(Base):
     pkd = Column(String(2), ForeignKey("pkd.pkd"), nullable=False)
     pkd_rel = relationship("PKD", back_populates="pkds")
 
+class CeidgDB(Base):
+    __tablename__ = "ceidg"
+    id = Column(Integer, primary_key=True, index=True)
+    pkd_id = Column(String(2))
+    wskaznik = Column(BigInteger)
+    utworzono = Column(TIMESTAMP)
+
 # --- PYDANTIC SCHEMAS (UPDATED FOR V2) ---
 class SectionSchema(BaseModel):
     section_code: str
@@ -102,12 +109,19 @@ class GusSchema(BaseModel):
 class CombinedScoreSchema(BaseModel):
     section_code: str
     section_name: str
-    market_score: Optional[int] = None       # Wynik z giełdy (0-100)
+    market_score: Optional[int] = None       # Wynik z giełdy
     gus_score: Optional[float] = None        # Wynik z GUS
+    ceidg_score: Optional[float] = None      # Wynik z ceidg
     final_score: float    # Średnia z obu
 
     model_config = ConfigDict(from_attributes=True)
 
+class CeidgSimpleSchema(BaseModel):
+    pkd_id: str
+    wskaznik: int
+
+    class Config:
+        from_attributes = True
 # --- APP SETUP ---
 app = FastAPI()
 
@@ -211,94 +225,134 @@ async def get_all_categories(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Nie znaleziono kategorii")
     return categories
 
+@app.get("/ceidg/scores", response_model=List[CeidgSimpleSchema])
+async def get_all_ceidg_scores(db: AsyncSession = Depends(get_db)):
+    """
+    Pobiera surowe wyniki (wskaźniki) dla wszystkich sekcji z tabeli CEIDG.
+    """
+    stmt = select(CeidgDB)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+@app.get("/ceidg/scores/{section_code}", response_model=CeidgSimpleSchema)
+async def get_ceidg_score_by_code(section_code: str, db: AsyncSession = Depends(get_db)):
+    """
+    Pobiera wynik z CEIDG dla wybranej sekcji (np. 'F').
+    """
+    stmt = (
+        select(CeidgDB)
+        .where(CeidgDB.pkd_id == section_code.upper())
+        .limit(1)
+    )
+
+    result = await db.execute(stmt)
+    score = result.scalars().first()
+
+    if not score:
+        raise HTTPException(status_code=404, detail=f"Nie znaleziono danych CEIDG dla sekcji {section_code}")
+
+    return score
+
+
 @app.get("/scores", response_model=List[CombinedScoreSchema])
 async def get_combined_scores(db: AsyncSession = Depends(get_db)):
     """
     Zwraca zestawienie dla WSZYSTKICH sektorów.
-    - Jeśli dane są w obu źródłach -> Średnia.
-    - Jeśli tylko w jednym -> Wynik z tego jednego źródła.
+    Agreguje: Market (GPW), GUS, CEIDG.
+    Final Score to średnia z dostępnych źródeł.
     """
 
-    # --- 1. POBIERZ DANE RYNKOWE (Market) ---
+    # ==========================
+    # 1. POBRANIE DANYCH DO PAMIĘCI
+    # ==========================
+
+    # --- A. RYNEK (Market) ---
     latest_report_subquery = (
         select(ReportDB.id)
         .order_by(desc(ReportDB.date))
         .limit(1)
         .scalar_subquery()
     )
+    res_market = await db.execute(select(SectionDB).where(SectionDB.report_id == latest_report_subquery))
+    # Mapa: { "KOD": obiekt_SectionDB }
+    market_map = {row.section_code: row for row in res_market.scalars().all()}
 
-    stmt_market = select(SectionDB).where(SectionDB.report_id == latest_report_subquery)
-    result_market = await db.execute(stmt_market)
-    market_rows = result_market.scalars().all()
+    # --- B. GUS ---
+    res_gus = await db.execute(select(GusScores, PKD).join(PKD, GusScores.pkd == PKD.pkd))
+    # Mapa: { "KOD": (obiekt_GusScores, obiekt_PKD) }
+    gus_map = {row[0].pkd: row for row in res_gus.all()}
 
-    # Zamień listę na słownik dla szybkiego dostępu: { "F": obiekt_db, "K": obiekt_db }
-    market_dict = {row.section_code: row for row in market_rows}
+    # --- C. CEIDG (NOWOŚĆ) ---
+    res_ceidg = await db.execute(select(CeidgDB))
+    # Mapa: { "KOD": wartość_liczbowa }
+    ceidg_map = {row.pkd_id: float(row.wskaznik) for row in res_ceidg.scalars().all()}
 
-    # --- 2. POBIERZ DANE GUS ---
-    # Dołączamy tabelę PKD, żeby mieć nazwę sektora, jeśli brakuje go w danych rynkowych
-    stmt_gus = select(GusScores, PKD).join(PKD, GusScores.pkd == PKD.pkd)
-    result_gus = await db.execute(stmt_gus)
-    gus_rows = result_gus.all()  # Zwraca listę krotek (GusScores, PKD)
+    # ==========================
+    # 2. LOGIKA AGREGACJI
+    # ==========================
 
-    # Słownik: { "F": (wynik_gus, nazwa_z_pkd) }
-    gus_dict = {row[0].pkd: (row[0], row[1]) for row in gus_rows}
-
-    # --- 3. POŁĄCZ DANE (FULL OUTER JOIN LOGIC) ---
-
-    # Zbiór wszystkich unikalnych kodów z obu źródeł
-    all_codes = set(market_dict.keys()) | set(gus_dict.keys())
+    # Zbiór wszystkich unikalnych kodów ze wszystkich 3 źródeł
+    all_codes = set(market_map.keys()) | set(gus_map.keys()) | set(ceidg_map.keys())
 
     final_results = []
 
     for code in all_codes:
-        market_entry = market_dict.get(code)
-        gus_entry_tuple = gus_dict.get(code)  # To jest krotka (GusScores, PKD)
+        # Zbieramy wartości do średniej
+        valid_values = []
 
-        # Wartości domyślne
+        # Inicjalizacja zmiennych do JSON-a
         m_score = None
         g_score = None
-        final_val = 0.0
+        c_score = None
 
-        # Ustalamy nazwę sektora (priorytet ma nazwa z Rynku, jeśli brak - to z tabeli PKD)
-        sec_name = "Nieznany Sektor"
-        if market_entry:
-            sec_name = market_entry.section_name
-        elif gus_entry_tuple:
-            sec_name = gus_entry_tuple[1].nazwa  # Pobieramy nazwę z tabeli PKD
+        section_name = "Nieznana sekcja"
 
-        # --- LOGIKA LICZENIA ---
+        # 1. MARKET
+        if code in market_map:
+            item = market_map[code]
+            val = float(item.safety_score)
+            m_score = int(val)
+            valid_values.append(val)
+            section_name = item.section_name
 
-        if market_entry:
-            m_score = int(market_entry.safety_score)
+        # 2. GUS
+        if code in gus_map:
+            item, pkd_info = gus_map[code]
+            val = float(item.wskaznik)
+            g_score = val
+            valid_values.append(val)
+            # Fallback nazwy
+            if section_name == "Nieznana sekcja":
+                section_name = pkd_info.nazwa
 
-        if gus_entry_tuple:
-            g_score = float(gus_entry_tuple[0].wskaznik)
+        # 3. CEIDG
+        if code in ceidg_map:
+            val = ceidg_map[code]
+            c_score = val
+            valid_values.append(val)
+            # Fallback nazwy (jeśli sekcja jest tylko w CEIDG - mało prawdopodobne, ale możliwe)
+            # Tutaj można by ewentualnie dociągnąć nazwę z PKD, jeśli mamy dostęp
 
-        # Scenariusz A: Są oba wyniki -> Liczymy średnią
-        if m_score is not None and g_score is not None:
-            final_val = (m_score + g_score) / 2.0
+        # Obliczanie średniej (zabezpieczenie przed dzieleniem przez zero)
+        if valid_values:
+            final_val = sum(valid_values) / len(valid_values)
+        else:
+            final_val = 0.0
 
-        # Scenariusz B: Tylko Rynek -> Wynik to wynik rynkowy
-        elif m_score is not None:
-            final_val = float(m_score)
-
-        # Scenariusz C: Tylko GUS -> Wynik to wynik GUS
-        elif g_score is not None:
-            final_val = float(g_score)
-
-        # Dodaj do listy wynikowej
         final_results.append({
             "section_code": code,
-            "section_name": sec_name,
+            "section_name": section_name,
             "market_score": m_score,
             "gus_score": g_score,
+            "ceidg_score": c_score,  # Nowe pole, stare integracje je zignorują
             "final_score": round(final_val, 2)
         })
 
-    # Opcjonalnie: sortowanie po wyniku końcowym malejąco
+    # Sortowanie
     final_results.sort(key=lambda x: x["final_score"], reverse=True)
 
     return final_results
+
 
 # --- ENDPOINT 2: Konkretny sektor ---
 @app.get("/scores/{section_code}", response_model=CombinedScoreSchema)
@@ -321,32 +375,56 @@ async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depen
     res_gus = await db.execute(stmt_gus)
     gus_entry_row = res_gus.first()  # (GusScores, PKD)
 
-    if not market_entry and not gus_entry_row:
-        raise HTTPException(status_code=404, detail="Brak danych dla tego sektora w obu źródłach")
+    # 3. Pobierz dane CEIDG
+    stmt_ceidg = select(CeidgDB).where(CeidgDB.pkd_id == code)
+    res_ceidg = await db.execute(stmt_ceidg)
+    ceidg_entry = res_ceidg.scalars().first()
 
-    # 3. Logika łączenia
-    m_score = int(market_entry.safety_score) if market_entry else None
-    g_score = float(gus_entry_row[0].wskaznik) if gus_entry_row else None
+    if not market_entry and not gus_entry_row and not ceidg_entry:
+        raise HTTPException(status_code=404, detail="Brak danych dla tego sektora w żadnym źródle")
 
-    # Nazwa
-    sec_name = market_entry.section_name if market_entry else gus_entry_row[1].nazwa
+    # Zbieranie wartości
+    valid_values = []
 
-    # Liczenie
-    if m_score is not None and g_score is not None:
-        final = (m_score + g_score) / 2.0
-    elif m_score is not None:
-        final = float(m_score)
+    m_score = None
+    if market_entry:
+        val = float(market_entry.safety_score)
+        m_score = int(val)
+        valid_values.append(val)
+
+    g_score = None
+    if gus_entry_row:
+        val = float(gus_entry_row[0].wskaznik)
+        g_score = val
+        valid_values.append(val)
+
+    c_score = None
+    if ceidg_entry:
+        val = float(ceidg_entry.wskaznik)
+        c_score = val
+        valid_values.append(val)
+
+    # Nazwa (Priorytet: Market -> Gus -> Unknown)
+    sec_name = "Nieznana sekcja"
+    if market_entry:
+        sec_name = market_entry.section_name
+    elif gus_entry_row:
+        sec_name = gus_entry_row[1].nazwa
+
+    # Liczenie średniej
+    if valid_values:
+        final = sum(valid_values) / len(valid_values)
     else:
-        final = float(g_score)
+        final = 0.0
 
     return {
         "section_code": code,
         "section_name": sec_name,
         "market_score": m_score,
         "gus_score": g_score,
+        "ceidg_score": c_score,
         "final_score": round(final, 2)
     }
-
 # --- ENTRY POINT (RUN SERVER) ---
 if __name__ == "__main__":
     # This allows you to run the file directly in PyCharm
