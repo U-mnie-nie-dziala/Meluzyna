@@ -233,7 +233,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-API będzie dostępne pod adresem: `http://127.0.0.1:8000`. Dokumentacja Swagger UI: `http://127.0.0.1:8000/docs`.
+API będzie dostępne pod adresem: `http://127.0.0.1:8001`. Dokumentacja Swagger UI: `http://127.0.0.1:8001/docs`.
 
 ### 2. Frontend
 

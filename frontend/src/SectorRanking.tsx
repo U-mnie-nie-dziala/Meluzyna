@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from './config';
 import './Ranking.css';
 
 // AKTUALIZACJA: Dodano ceidg_score zgodnie z Twoim nowym backendem
@@ -16,12 +17,11 @@ const SectorRanking = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = "http://127.0.0.1:8000";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_URL}/scores`);
+        const response = await fetch(`${API_BASE_URL}/scores`);
 
         if (!response.ok) {
           throw new Error('Błąd pobierania danych');
