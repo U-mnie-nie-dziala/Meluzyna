@@ -1,3 +1,4 @@
+// src/components/StatisticsDisplay.tsx
 import { useEffect, useState } from 'react';
 import {
   TrendingUp,
@@ -8,14 +9,14 @@ import {
   Award,
 } from 'lucide-react';
 import { AnalysisData, Sector } from '../types';
-import { PerformanceTab } from './tabs/PerformanceTab';
+import SectorRanking from '../SectorRanking'; // <--- Import Twojego rankingu
 
 interface StatisticsDisplayProps {
   data: AnalysisData;
   sector: Sector;
 }
 
-type Tab = 'overview' | 'performance' | 'risk';
+type Tab = 'overview' | 'performance' | 'media' | 'stock-market';
 
 export default function StatisticsDisplay({ data, sector }: StatisticsDisplayProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -68,15 +69,23 @@ export default function StatisticsDisplay({ data, sector }: StatisticsDisplayPro
       </div>
 
       <div className="p-6">
-        {activeTab === 'overview' && <OverviewTab data={data} />}
-        {activeTab === 'performance' && <PerformanceTab data={data} />}
-        {activeTab === 'risk' && <RiskTab data={data} />}
+        {/* Przekazujemy sector do OverviewTab dla CEIDG */}
+        {activeTab === 'overview' && <OverviewTab data={data} sector={sector} />}
+        
+        {/* Tu jest Twój nowy ranking zamiast tabeli Value A/B */}
+        {activeTab === 'performance' && <SectorRanking />}
+        
+        {activeTab === 'media' && <RiskTab data={data} />}
+        
         {activeTab === 'stock-market' && <StockMarket sector={sector} />}
       </div>
     </div>
   );
 }
 
+// ------------------------------------------------------------------
+// PONIŻEJ SĄ FUNKCJE POMOCNICZE, KTÓRYCH BRAKOWAŁO I POWODOWAŁY BŁĄD
+// ------------------------------------------------------------------
 
 function StockMarket({ sector }: { sector: Sector }) {
   const [latest, setLatest] = useState(null);
@@ -85,8 +94,10 @@ function StockMarket({ sector }: { sector: Sector }) {
     const fetchLatest = async () => {
       try {
         const res = await fetch(`http://127.0.0.1:8000/markets/scores/${sector}`);
-        const data = await res.json();
-        setLatest(data);
+        if(res.ok) {
+            const data = await res.json();
+            setLatest(data);
+        }
       } catch (error) {
         console.error("Error fetching sector score:", error);
       }
@@ -99,20 +110,51 @@ function StockMarket({ sector }: { sector: Sector }) {
 
   return (
     <div>
-      <h1>Sector Market Data ({sector})</h1>
+      <h3 className="text-lg font-bold mb-4">Dane Giełdowe ({sector})</h3>
       {latest ? (
-        <pre>{JSON.stringify(latest, null, 2)}</pre>
+        <pre className="bg-slate-50 p-4 rounded-lg text-sm overflow-auto">
+            {JSON.stringify(latest, null, 2)}
+        </pre>
       ) : (
-        "Loading..."
+        "Ładowanie..."
       )}
     </div>
   );
 }
 
-
-function OverviewTab({ data }: { data: AnalysisData }) {
-  // Determine color for large score
+function OverviewTab({ data, sector }: { data: AnalysisData, sector: Sector }) {
   const isNoData = data.combinedScore === -1;
+  
+  // --- NOWE LOGIKA DLA CEIDG ---
+  const [ceidgScore, setCeidgScore] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchCeidg = async () => {
+        setCeidgScore(null); 
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/ceidg/scores/${sector}`);
+            if (response.ok) {
+                const result = await response.json();
+                // Sprawdzamy czy to obiekt czy liczba
+                const scoreValue = result.score || result.wskaznik || result.final_score || result.safety_score;
+                
+                if (scoreValue !== undefined) {
+                    setCeidgScore(Number(scoreValue));
+                } else if (typeof result === 'number') {
+                    setCeidgScore(result);
+                }
+            }
+        } catch (e) {
+            console.error("Błąd pobierania CEIDG", e);
+            setCeidgScore(null);
+        }
+    }
+
+    if (sector) {
+        fetchCeidg();
+    }
+  }, [sector]);
+  // -----------------------------
 
   let scoreColor = '';
   let scoreBg = '';
@@ -125,7 +167,6 @@ function OverviewTab({ data }: { data: AnalysisData }) {
     scoreBg = data.combinedScore >= 60 ? 'bg-emerald-50 border-emerald-200' : data.combinedScore >= 40 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200';
   }
 
-  // Icon logic for Combined Score: Same behavior as ScoreCards (Result-based)
   let CombinedIcon = AlertCircle;
   if (!isNoData) {
     if (data.combinedScore >= 60) CombinedIcon = TrendingUp;
@@ -149,7 +190,7 @@ function OverviewTab({ data }: { data: AnalysisData }) {
               {isNoData ? '--' : data.combinedScore}
             </span>
             <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-              {isNoData ? 'Brak danych' : '/ 100 Points'}
+              {isNoData ? 'Brak danych' : '/ 100 pkt'}
             </span>
           </div>
           <CombinedIcon className={`w-12 h-12 ${scoreColor}`} />
@@ -157,10 +198,12 @@ function OverviewTab({ data }: { data: AnalysisData }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Dane z CEIDG */}
         <ScoreCard
           label="Demografia firm CEIDG"
-          value={data.demographics}
+          value={ceidgScore !== null ? ceidgScore : -1} 
         />
+        
         <ScoreCard
           label="Tempo wzrostu GUS"
           value={data.growthSpeed}
@@ -177,19 +220,19 @@ function OverviewTab({ data }: { data: AnalysisData }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Financial Ratios</h3>
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Wskaźniki Finansowe</h3>
           <div className="space-y-3">
-            <RatioRow label="Profit Margin" value={`${data.profitMargin}%`} />
-            <RatioRow label="Return on Equity" value={`${data.roe}%`} />
-            <RatioRow label="P/E Ratio" value={data.peRatio.toFixed(2)} />
-            <RatioRow label="Dividend Yield" value={`${data.dividendYield}%`} />
+            <RatioRow label="Marża Zysku" value={`${data.profitMargin}%`} />
+            <RatioRow label="ROE" value={`${data.roe}%`} />
+            <RatioRow label="Wskaźnik C/Z (P/E)" value={data.peRatio.toFixed(2)} />
+            <RatioRow label="Stopa Dywidendy" value={`${data.dividendYield}%`} />
           </div>
         </div>
 
         <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <Award className="w-4 h-4" />
-            Top Performers
+            Liderzy Sektora
           </h3>
           <div className="space-y-3">
             {data.topPerformers.map((performer, index) => (
@@ -211,8 +254,6 @@ function OverviewTab({ data }: { data: AnalysisData }) {
   );
 }
 
-
-
 function RiskTab({ data }: { data: AnalysisData }) {
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -231,7 +272,7 @@ function RiskTab({ data }: { data: AnalysisData }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-200">
         <div>
-          <h3 className="text-sm font-semibold text-slate-700 mb-1">Overall Risk Level</h3>
+          <h3 className="text-sm font-semibold text-slate-700 mb-1">Poziom Ryzyka</h3>
           <p className="text-2xl font-bold text-slate-900">{data.riskLevel}</p>
         </div>
         <div className={`px-4 py-2 rounded-lg font-semibold ${getRiskColor(data.riskLevel)}`}>
@@ -241,13 +282,13 @@ function RiskTab({ data }: { data: AnalysisData }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <RiskMetricCard
-          label="Debt-to-Equity Ratio"
+          label="Wskaźnik Zadłużenia"
           value={data.debtToEquity.toFixed(2)}
           optimal="< 2.0"
           status={data.debtToEquity < 2 ? 'good' : data.debtToEquity < 3 ? 'moderate' : 'high'}
         />
         <RiskMetricCard
-          label="P/E Ratio"
+          label="Wskaźnik C/Z"
           value={data.peRatio.toFixed(2)}
           optimal="15-25"
           status={
@@ -264,10 +305,10 @@ function RiskTab({ data }: { data: AnalysisData }) {
         <div className="flex gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-amber-900 mb-1">Risk Considerations</h4>
+            <h4 className="font-semibold text-amber-900 mb-1">Uwagi dot. ryzyka</h4>
             <p className="text-sm text-amber-800 leading-relaxed">
-              Monitor debt levels and valuation metrics closely. Diversification across multiple
-              companies within the sector is recommended to mitigate individual company risks.
+              Monitoruj poziom zadłużenia i wskaźniki wyceny. Zalecana jest dywersyfikacja
+              portfela w ramach sektora, aby ograniczyć ryzyko związane z pojedynczymi spółkami.
             </p>
           </div>
         </div>
@@ -276,21 +317,32 @@ function RiskTab({ data }: { data: AnalysisData }) {
   );
 }
 
-function ScoreCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function RiskMetricCard({ label, value, optimal, status }: { label: string, value: string, optimal: string, status: 'good' | 'moderate' | 'high' }) {
+    const getStatusColor = () => {
+        if (status === 'good') return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+        if (status === 'moderate') return 'text-amber-600 bg-amber-50 border-amber-200';
+        return 'text-red-600 bg-red-50 border-red-200';
+    }
+
+    return (
+        <div className={`p-4 rounded-lg border ${getStatusColor()}`}>
+            <p className="text-xs font-semibold opacity-80 uppercase mb-1">{label}</p>
+            <div className="flex justify-between items-end">
+                <p className="text-2xl font-bold">{value}</p>
+                <p className="text-xs opacity-80">Optymalnie: {optimal}</p>
+            </div>
+        </div>
+    )
+}
+
+function ScoreCard({ label, value }: { label: string; value: number }) {
   const isNoData = value === -1;
 
-  // Color scale logic: Red (0) -> Yellow (50) -> Green (100)
   const getColorClass = (val: number) => {
     if (isNoData) return 'text-slate-400';
-    if (val >= 60) return 'text-emerald-500'; // High/Good
-    if (val >= 40) return 'text-yellow-500';  // Mid/Neutral
-    return 'text-red-500';                    // Low/Bad
+    if (val >= 60) return 'text-emerald-500';
+    if (val >= 40) return 'text-yellow-500';
+    return 'text-red-500'; 
   };
 
   const getBgClass = (val: number) => {
@@ -300,11 +352,10 @@ function ScoreCard({
     return 'bg-red-50 border-red-100';
   };
 
-  // Icon logic: Zigzag arrows
   const getTrendIcon = (val: number) => {
     if (isNoData) return <AlertCircle className="w-8 h-8 text-slate-300" />;
     if (val >= 60) return <TrendingUp className="w-8 h-8" />;
-    if (val >= 40) return <Activity className="w-8 h-8" />; // Horizontal-ish zigzag
+    if (val >= 40) return <Activity className="w-8 h-8" />;
     return <TrendingDown className="w-8 h-8" />;
   };
 
@@ -314,10 +365,7 @@ function ScoreCard({
   return (
     <div className={`border rounded-lg p-5 hover:shadow-md transition-all ${bgClass}`}>
       <div className="flex items-center justify-between mb-3">
-        {/* Increased Label Size (text-lg font-bold) */}
         <p className="text-lg font-bold text-slate-700">{label}</p>
-
-        {/* Only Trend Icon - No left icon */}
         <div className={colorClass}>
           {getTrendIcon(value)}
         </div>
@@ -327,11 +375,10 @@ function ScoreCard({
         {isNoData ? (
           <p className="text-xl font-bold text-slate-400">Brak danych</p>
         ) : (
-          <p className={`text-2xl font-bold ${colorClass}`}>{value}/100</p>
+          <p className={`text-2xl font-bold ${colorClass}`}>{value.toFixed(1)}/100</p>
         )}
       </div>
 
-      {/* Progress Bar Visual - Hidden if No Data */}
       {!isNoData && (
         <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
           <div
@@ -344,7 +391,6 @@ function ScoreCard({
   );
 }
 
-// Helper for progress bar color
 function valToTailwind(val: number) {
   if (val >= 60) return 'bg-emerald-500';
   if (val >= 40) return 'bg-yellow-500';
@@ -359,5 +405,3 @@ function RatioRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-
