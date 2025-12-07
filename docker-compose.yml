@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+
+  backend:
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: meluzyna_backend
+
+    ports:
+      - "8000:8000"
+
+    restart: always
+    environment:
+      - DB_USER=hack
+      - DB_PASS=HackNation!
+      - DB_HOST=212.132.76.195
+      - DATABASE_PORT=5433
+      - DB_NAME=hacknation_db
+
+  frontend:
+
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: meluzyna_frontend
+
+    ports:
+      - "3000:80"
+    restart: always
+
+    depends_on:
+      - backend
