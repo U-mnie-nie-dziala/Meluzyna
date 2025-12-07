@@ -383,9 +383,7 @@ async def get_combined_scores(db: AsyncSession = Depends(get_db)):
     return final_results
 
 # --- ENDPOINT 2: Konkretny sektor ---
-app.get("/scores/{section_code}", response_model=CombinedScoreSchema)
-
-
+@app.get("/scores/{section_code}", response_model=CombinedScoreSchema)
 async def get_combined_score_by_code(section_code: str, db: AsyncSession = Depends(get_db)):
     code = section_code.upper()
 
