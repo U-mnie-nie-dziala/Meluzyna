@@ -1,3 +1,4 @@
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -52,7 +53,12 @@ export function RiskTab({ data }: { data: AnalysisData }) {
         <h3 className="text-md font-semibold text-slate-800 mb-4">
           Histogram nastrojów komentarzy na Youtube w danym sektorze (0–100)
         </h3>
-        <Bar data={histogramData} />
+        <div className="h-[400px] w-full">
+          <Bar
+            data={histogramData}
+            options={{ responsive: true, maintainAspectRatio: false }}
+          />
+        </div>
       </div>
     </div>
   );

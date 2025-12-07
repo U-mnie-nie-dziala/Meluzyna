@@ -15,7 +15,7 @@ export function generateAnalysis(sector: Sector): AnalysisData {
     dividendYield: 0,
     totalCompanies: 0,
     topPerformers: [],
-    riskLevel: 'N/A',
+    riskLevel: 'Medium',
     outlook: 'N/A',
     demographics: -1,         // Sentinel for "No Data"
     growthSpeed: -1,          // Sentinel for "No Data"
@@ -29,8 +29,8 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
   try {
     // Dual fetch using soft-handling (return null if failed)
     const [detailsData, scoresData] = await Promise.all([
-      fetch(`http://127.0.0.1:8000/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`http://127.0.0.1:8000/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch(`http://127.0.0.1:8001/markets/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`http://127.0.0.1:8001/scores/${sector}`).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
 
     // If both failed, we really have nothing -> Return explicit "No Data" state
@@ -62,6 +62,9 @@ export async function fetchSectorAnalysis(sector: Sector): Promise<AnalysisData>
 
     const d = detailsData || defDetails;
     const s = scoresData || defScores;
+
+    console.log("Analytics details:", d);
+    console.log("Analytics scores:", s);
 
     return {
       marketCap: d.total_cap_pln ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', notation: 'compact' }).format(d.total_cap_pln) : 'Brak danych',

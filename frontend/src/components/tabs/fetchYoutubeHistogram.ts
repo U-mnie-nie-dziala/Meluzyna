@@ -1,5 +1,7 @@
+import { AnalysisData } from "./types";
+
 export async function fetchYoutubeHistogram(): Promise<AnalysisData> {
-  const res = await fetch("http://127.0.0.1:8000/komentarz_youtube");
+  const res = await fetch("http://127.0.0.1:8001/komentarz_youtube");
 
   if (!res.ok) {
     throw new Error("Failed to fetch komentarz_youtube");
